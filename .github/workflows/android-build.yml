@@ -1,0 +1,76 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch: # Permet de lancer la compilation manuellement
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Check Node Version
+      run: node -v
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '24'
+        cache: 'npm'
+
+    - name: Setup Java JDK
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'zulu'
+        java-version: '21'
+
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v3
+      with:
+        gradle-version: '8.14.3'
+
+    - name: Install npm dependencies
+      run: npm install --legacy-peer-deps
+
+    - name: Build Web App
+      run: npm run build
+
+    - name: Install Capacitor Assets
+      run: npm install -g @capacitor/assets
+
+    - name: Generate Android Assets
+      run: npx @capacitor/assets generate --android --assetPath public
+
+    - name: Sync Capacitor
+      run: npx cap sync android
+
+    - name: Verify assets presence
+      run: |
+        echo "=== Web assets ==="
+        ls android/app/src/main/assets/public/ || echo "no public assets"
+        echo "=== Android icons ==="
+        ls android/app/src/main/res/ | grep mipmap || echo "no mipmap"
+        echo "=== Splash screen ==="
+        ls android/app/src/main/res/ | grep drawable || echo "no drawable"
+
+    - name: Build Android APK (Debug)
+      working-directory: android
+      run: |
+        gradle assembleDebug
+
+    - name: Upload APK as Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: KWA-WATT-App-APK
+        path: android/app/build/outputs/apk/debug/app-debug.apk
+        retention-days: 7

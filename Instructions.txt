@@ -1,0 +1,36 @@
+J'ai préparé l'environnement et généré tous les fichiers nécessaires pour que vous puissiez utiliser ce projet dans Android Studio et construire votre APK.
+Voici ce que j'ai fait :
+Installation de Capacitor : C'est l'outil (un pont WebView moderne) qui permet d'encapsuler votre application web React dans une application native Android.
+Création de la configuration : Le fichier capacitor.config.ts a été configuré avec un identifiant de bundle com.eneotool.app.
+Génération du projet Android natif : J'ai compilé le projet web une première fois et synchronisé le contenu web vers un vrai dossier de projet Android Studio (android/).
+Ajout de scripts NPM : J'ai ajouté des commandes dans package.json pour faciliter les futures mises à jour (npm run cap:build et npm run cap:sync).
+Étapes pour obtenir votre APK avec Android Studio :
+Exporter le projet :
+En haut à droite ou dans le menu de l'interface AI Studio, trouvez l'option pour exporter/télécharger le projet en ZIP ("Export to Desktop" ou "Export as ZIP").
+Ouvrir dans Android Studio :
+Extrayez le fichier ZIP sur votre ordinateur.
+Lancez Android Studio.
+Cliquez sur Open et sélectionnez spécifiquement le sous-dossier android (pas le dossier racine du projet !).
+Compiler le projet Android :
+Patientez quelques instants pour que Gradle synchronise les dépendances.
+Dans le menu du haut d'Android Studio, allez sur Build > Build Bundle(s) / APK(s) > Build APK(s).
+Une fois la compilation terminée (une notification s'affichera en bas à droite), vous pourrez cliquer sur "locate" pour récupérer votre fichier .apk.
+Si vous modifiez le code de l'application (React) :
+Si vous ajoutez d'autres fonctionnalités au code source avant d'exporter, assurez-vous de mettre à jour le code côté Android en exécutant npm run cap:build dans le terminal depuis l'éditeur pour transférer la nouvelle version des fichiers vers le dossier android/ !
+
+
+1. Pour le thème sombre:
+ Dans  le Dashboard, la couleur de la date dans les Tool Tips dans deux graphes rend le texte invisible.
+Dans l'outil de calcul , la couleur du texte du double bouton est invisible pour le bouton non sélectionné, il devient visible avec un hover. C'est également le cas pour le bouton Annuler dans le Profil
+
+2. Dans le Profil, le bouton Connexion/Déconnexion doit prendre la valeur "Connection" lorsque l'on accède à l'application en tant que visiteur. La photo de profile de l'utilisateur doit pouvoir être supprimée.
+
+3. Il faut bien s'assurer que pour la première fois que l'utilisateur accède à l'application, il doit avoir le choix entre s'authentifier avec Gmail ou accéder en tant que Visiteur. Pour un utilisateur authentifié, ces données sont sauvegardé chaque jour en ligne (et rechargé à chaque fois qu'il s'authentifie) et en continu en local. Tandis que pour un visiteur, ces données sont juste sauvegardé en locale. Si l'application n'est pas utilisée pendant un mois, l'utilisateur sera automatiquement déconnecté.
+
+4. Créer un dossier dans lequel je vais déposer des images par défaut pour la section Aide, elle ne pourront pas être supprimé de façon permanente par l'utilisateur et seront rechargée si l'on réinitialise les réglages d'usine de l'application. Ce dossier contiendra aussi l'icone de l'application et le splash screen avec des noms spécifiques. 
+
+5. Pour l'Aide, lorsqu'on clique sur l'adresse email du support "À l'écoute de la clientèle:", cela doit ouvrir un boite mail.
+
+6.Une fois ces modifications apportées, mettre à jour les "fonctionnalités de l'application" dans l'Aide. 
+
+7.Enfin creer la documentation complete de l'application dans un fichier Markdown

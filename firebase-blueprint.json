@@ -1,0 +1,25 @@
+{
+  "entities": {
+    "UserData": {
+      "title": "User Data",
+      "description": "Store the serialized local state of the user",
+      "type": "object",
+      "properties": {
+        "state": {
+          "type": "string",
+          "description": "Serialized JSON string of AppState"
+        },
+        "updatedAt": {
+          "type": "timestamp"
+        }
+      },
+      "required": ["state"]
+    }
+  },
+  "firestore": {
+    "/user_data/{userId}": {
+      "schema": { "$ref": "UserData" },
+      "description": "User's application state backup"
+    }
+  }
+}

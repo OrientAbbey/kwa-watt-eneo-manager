@@ -1,0 +1,10 @@
+{
+  "android": {
+    "icon": {
+      "sources": ["public/icon.png"]
+    },
+    "splash": {
+      "sources": ["public/splash.png"]
+    }
+  }
+}

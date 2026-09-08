@@ -1,0 +1,8 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">KWA-WATT</string>
+    <string name="title_activity_main">KWA-WATT</string>
+    <string name="package_name">com.eneotool.app</string>
+    <string name="custom_url_scheme">com.eneotool.app</string>
+    <string name="server_client_id">567954813184-f9rqmje9ca1vckqopim7rl93mlrepq7a.apps.googleusercontent.com</string>
+</resources>

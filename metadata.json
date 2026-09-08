@@ -1,0 +1,11 @@
+{
+  "name": "KWA-WATT - ENEO Manager",
+  "description": "Gérez et suivez précisément vos consommations d'énergie ENEO (Prépayé) au Cameroun.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation",
+    "notifications"
+  ],
+  "majorCapabilities": []
+}

@@ -1,0 +1,168 @@
+export const TVA_RATE = 0.1925; // 19.25%
+
+export interface TariffRange {
+  min: number;
+  max: number;
+  base: number;
+  comfort: number;
+  tva_thresh: number | null;
+}
+
+export const TARIFFS: Record<"residential" | "professional", TariffRange[]> = {
+  residential: [
+    { min: 0, max: 110, base: 50, comfort: 94, tva_thresh: 220 },
+    { min: 111, max: 220, base: 79, comfort: 99, tva_thresh: 220 },
+    { min: 221, max: 400, base: 79, comfort: 99, tva_thresh: null },
+    { min: 401, max: 800, base: 94, comfort: 99, tva_thresh: null },
+    { min: 801, max: Infinity, base: 99, comfort: 99, tva_thresh: null },
+  ],
+  professional: [
+    { min: 0, max: 110, base: 84, comfort: 99, tva_thresh: null },
+    { min: 111, max: 400, base: 92, comfort: 99, tva_thresh: null },
+    { min: 401, max: Infinity, base: 99, comfort: 99, tva_thresh: null },
+  ],
+};
+
+export function calculateAverageConsumption(consumptions: number[]): number {
+  if (consumptions.length === 0) return 0;
+  const conso = consumptions.slice(-6);
+  const sum = conso.reduce((a, b) => a + b, 0);
+  return Math.round((sum / conso.length) * 1000) / 1000;
+}
+
+export function getTariffRange(average: number, clientType: "residential" | "professional", tariffs: Record<"residential" | "professional", TariffRange[]> = TARIFFS): TariffRange {
+  const type = clientType === "professional" ? "professional" : "residential";
+  const ranges = tariffs[type];
+  for (const range of ranges) {
+    if (average >= range.min && average <= range.max) {
+      return range;
+    }
+  }
+  return ranges[ranges.length - 1];
+}
+
+export function isTvaApplied(kwhPosition: number, tvaThreshold: number | null): boolean {
+  return tvaThreshold === null || kwhPosition > tvaThreshold;
+}
+
+export function getUnitPrice(rate: number, kwhPosition: number, tvaThreshold: number | null, tvaRate: number = TVA_RATE): number {
+  if (isTvaApplied(kwhPosition, tvaThreshold)) {
+    return rate * (1 + tvaRate);
+  }
+  return rate;
+}
+
+export interface CalculationResult {
+  value: number;
+  descriptionLines: string[];
+}
+
+export function calculatePrice(
+  quantityKwh: number,
+  cumulConsom: number,
+  average6Months: number,
+  clientType: "residential" | "professional",
+  tvaRate: number = TVA_RATE,
+  tariffs: Record<"residential" | "professional", TariffRange[]> = TARIFFS
+): CalculationResult {
+  const tranche = getTariffRange(average6Months, clientType, tariffs);
+  
+  const lines: string[] = [
+    `Pour une quantité de ${quantityKwh.toFixed(2)} kWh :`,
+    `- Tranche actuelle : ${tranche.min}-${tranche.max === Infinity ? '+' : tranche.max} kWh`,
+    `- Consommation cumulée du mois en cours : ${cumulConsom.toFixed(2)} kWh`,
+  ];
+  
+  const baseLimit = Math.max(0.0, tranche.max - cumulConsom);
+  const partInBase = Math.min(quantityKwh, baseLimit);
+  const partInComfort = quantityKwh - partInBase;
+  
+  let totalPrice = 0.0;
+  let runningCumul = cumulConsom;
+  
+  if (partInBase > 0) {
+    const nextKwhPosition = runningCumul + 1;
+    const unitPriceBase = getUnitPrice(tranche.base, nextKwhPosition, tranche.tva_thresh, tvaRate);
+    const costBase = partInBase * unitPriceBase;
+    totalPrice += costBase;
+    runningCumul += partInBase;
+    
+    lines.push(
+      `${partInBase.toFixed(2)} kWh X ${unitPriceBase.toFixed(2)} FCFA/kWh = ${costBase.toFixed(2)} FCFA ` +
+      `(tarif de base ${tranche.base} FCFA${unitPriceBase > tranche.base ? ' + TVA' : ''})`
+    );
+  }
+  
+  if (partInComfort > 0) {
+    const nextKwhPosition = runningCumul + 1;
+    const unitPriceComfort = getUnitPrice(tranche.comfort, nextKwhPosition, tranche.tva_thresh, tvaRate);
+    const costComfort = partInComfort * unitPriceComfort;
+    totalPrice += costComfort;
+    
+    lines.push(
+      `${partInComfort.toFixed(2)} kWh X ${unitPriceComfort.toFixed(2)} FCFA/kWh = ${costComfort.toFixed(2)} FCFA ` +
+      `(tarif de confort ${tranche.comfort} FCFA${unitPriceComfort > tranche.comfort ? ' + TVA' : ''})`
+    );
+  }
+  
+  const finalPrice = Math.ceil(totalPrice);
+  lines.push(`Total à payer : ${finalPrice} FCFA`);
+  
+  return { value: finalPrice, descriptionLines: lines };
+}
+
+export function calculateKwh(
+  amountFcfa: number,
+  cumulConsom: number,
+  average6Months: number,
+  clientType: "residential" | "professional",
+  tvaRate: number = TVA_RATE,
+  tariffs: Record<"residential" | "professional", TariffRange[]> = TARIFFS
+): CalculationResult {
+  const tranche = getTariffRange(average6Months, clientType, tariffs);
+  
+  const lines: string[] = [
+    `Pour un paiement de ${amountFcfa.toFixed(0)} FCFA :`,
+    `- Tranche actuelle : ${tranche.min}-${tranche.max === Infinity ? '+' : tranche.max} kWh`,
+    `- Consommation cumulée du mois en cours : ${cumulConsom.toFixed(2)} kWh`,
+  ];
+  
+  let remainingPrice = amountFcfa;
+  let totalKwh = 0.0;
+  let runningCumul = cumulConsom;
+  
+  const baseLimit = Math.max(0.0, tranche.max - runningCumul);
+  
+  if (baseLimit > 0 && remainingPrice > 0) {
+    const pos = runningCumul + 1;
+    const unitPriceBase = getUnitPrice(tranche.base, pos, tranche.tva_thresh, tvaRate);
+    const kwhFromBase = Math.min(baseLimit, remainingPrice / unitPriceBase);
+    const costBase = kwhFromBase * unitPriceBase;
+    
+    lines.push(
+      `${remainingPrice.toFixed(2)} FCFA ÷ ${unitPriceBase.toFixed(2)} FCFA/kWh = ${kwhFromBase.toFixed(2)} kWh ` +
+      `(tarif de base ${tranche.base} FCFA${unitPriceBase > tranche.base ? ' + TVA)' : ')'}`
+    );
+    
+    remainingPrice -= costBase;
+    totalKwh += kwhFromBase;
+    runningCumul += kwhFromBase;
+  }
+  
+  if (remainingPrice > 0) {
+    const pos = runningCumul + 1;
+    const unitPriceComfort = getUnitPrice(tranche.comfort, pos, tranche.tva_thresh, tvaRate);
+    const kwhFromComfort = remainingPrice / unitPriceComfort;
+    totalKwh += kwhFromComfort;
+    
+    lines.push(
+      `${remainingPrice.toFixed(2)} FCFA ÷ ${unitPriceComfort.toFixed(2)} FCFA/kWh = ${kwhFromComfort.toFixed(2)} kWh ` +
+      `(tarif de confort ${tranche.comfort} FCFA${unitPriceComfort > tranche.comfort ? ' + TVA)' : ')'}`
+    );
+  }
+  
+  const finalKwh = Math.round(totalKwh * 100) / 100;
+  lines.push(`Total énergie obtenue : ${finalKwh.toFixed(2)} kWh`);
+  
+  return { value: finalKwh, descriptionLines: lines };
+}

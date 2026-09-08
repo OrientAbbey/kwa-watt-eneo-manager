@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { HelpCircle, Calculator, Zap, Database, Link as LinkIcon, Image as ImageIcon, Trash2, Plus, Phone, Mail, X } from 'lucide-react';
 import { Camera, CameraSource, CameraResultType } from '@capacitor/camera';
 import SourcePicker from '../ui/SourcePicker';
+import { compressImage } from '../../lib/utils';
 
 export default function HelpView() {
   const { state, updateHelpImages } = useApp();
@@ -30,7 +31,7 @@ export default function HelpView() {
       });
 
       if (image && image.base64String) {
-        const base64 = `data:image/${image.format};base64,${image.base64String}`;
+        const base64 = await compressImage(`data:image/${image.format};base64,${image.base64String}`);
         updateHelpImages([...(state.helpImages || []), base64]);
       }
     } catch (error: any) {
@@ -45,8 +46,8 @@ export default function HelpView() {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onload = (evt) => {
-        const base64 = evt.target?.result as string;
+      reader.onload = async (evt) => {
+        const base64 = await compressImage(evt.target?.result as string);
         updateHelpImages([...(state.helpImages || []), base64]);
       };
       reader.readAsDataURL(file);
@@ -214,10 +215,10 @@ export default function HelpView() {
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             {/* Default system images */}
             {[
-              new URL('/public/assets/help/eneo_6_months.jpg', import.meta.url).href,
-              new URL('/public/assets/help/eneo_6_months_eng.jpg', import.meta.url).href,
-              new URL('/public/assets/help/eneo_consumption_rate.jpg', import.meta.url).href,
-              new URL('/public/assets/help/eneo_consumption_rate_eng.jpg', import.meta.url).href
+              new URL('/assets/help/eneo_6_months.jpg', import.meta.url).href,
+              new URL('/assets/help/eneo_6_months_eng.jpg', import.meta.url).href,
+              new URL('/assets/help/eneo_consumption_rate.jpg', import.meta.url).href,
+              new URL('/assets/help/eneo_consumption_rate_eng.jpg', import.meta.url).href
             ].map((imgUrl, idx) => (
               <div key={`default-${idx}`} className="relative group border border-slate-200 dark:border-slate-600 rounded-lg overflow-hidden aspect-square cursor-pointer" onClick={() => setFullScreenImage(imgUrl)}>
                 <img src={imgUrl} alt={`Aide Eneo ${idx}`} className="w-full h-full object-cover" />

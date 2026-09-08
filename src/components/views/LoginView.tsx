@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../../store/AppContext';
 import { signInWithGoogle } from '../../lib/firebase';
-import { requestAllPermissions } from '../../lib/permissions';
+import { generateAvatar } from '../../lib/utils';
 
 export default function LoginView() {
   const { setCurrentUser } = useApp();
@@ -12,7 +12,6 @@ export default function LoginView() {
     setIsLoading(true);
     setErrorMsg("");
     try {
-      await requestAllPermissions();
       const user = await signInWithGoogle();
       if (!user) {
         // Redirection en cours, ne rien faire
@@ -22,19 +21,18 @@ export default function LoginView() {
         type: 'google',
         name: user.displayName || 'Utilisateur',
         email: user.email || '',
-        avatar: user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'U')}&background=random`,
+        avatar: user.photoURL || generateAvatar(user.displayName || ''),
         lastActive: Date.now()
       });
     } catch (error: any) {
       console.error(error);
-      setErrorMsg("Erreur de connexion \n(" + (error?.code || 'Erreur inconnue') + ") " + (error?.message || ""));
+      setErrorMsg(error instanceof Error ? error.message : String(error || 'Erreur de connexion'));
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleVisitorLogin = async () => {
-    await requestAllPermissions();
     setCurrentUser({
       type: 'visitor',
       name: 'Visiteur',
@@ -43,13 +41,13 @@ export default function LoginView() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-900/50 dark:bg-slate-900 p-4">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-900 p-4">
       <div className="w-full max-w-md bg-white dark:bg-slate-800 rounded-3xl shadow-2xl p-8 transform transition-all duration-300 animate-in fade-in zoom-in-95">
         <div className="flex flex-col items-center mb-8">
           <div className="w-20 h-20 bg-white rounded-2xl flex items-center justify-center overflow-hidden mb-6 shadow-lg shadow-black/10">
             <img src="/icon.png" alt="KWA-WATT Logo" className="w-full h-full object-cover" />
           </div>
-          <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100 dark:text-white tracking-tight">KWA-WATT</h1>
+          <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">KWA-WATT</h1>
           <p className="text-slate-500 dark:text-slate-400 mt-2 text-center text-sm">Gérez et suivez rapidement vos consommations ENEO</p>
         </div>
 
@@ -63,7 +61,7 @@ export default function LoginView() {
           <button 
             onClick={handleGoogleLogin}
             disabled={isLoading}
-            className="w-full flex items-center justify-center gap-3 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-600 dark:bg-slate-700 hover:bg-slate-50 dark:bg-slate-900/50 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 dark:text-white px-6 py-4 rounded-xl font-bold transition-all disabled:opacity-70 disabled:cursor-not-allowed"
+            className="w-full flex items-center justify-center gap-3 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 px-6 py-4 rounded-xl font-bold transition-all disabled:opacity-70 disabled:cursor-not-allowed"
           >
             {isLoading ? (
               <div className="w-6 h-6 border-2 border-slate-400 border-t-transparent rounded-full animate-spin"></div>
@@ -80,7 +78,7 @@ export default function LoginView() {
           
           <div className="relative flex items-center py-2">
             <div className="flex-grow border-t border-slate-200 dark:border-slate-600"></div>
-            <span className="flex-shrink-0 mx-4 text-slate-400 dark:text-slate-500 dark:text-slate-400 text-sm font-medium">OU</span>
+            <span className="flex-shrink-0 mx-4 text-slate-400 dark:text-slate-500 text-sm font-medium">OU</span>
             <div className="flex-grow border-t border-slate-200 dark:border-slate-600"></div>
           </div>
 
@@ -92,7 +90,7 @@ export default function LoginView() {
             Continuer comme visiteur
           </button>
         </div>
-        <p className="text-center text-xs text-slate-400 dark:text-slate-500 dark:text-slate-400 mt-8">
+        <p className="text-center text-xs text-slate-400 dark:text-slate-500 mt-8">
           En continuant comme visiteur, vos données seront stockées uniquement sur votre appareil.
         </p>
       </div>

@@ -3,7 +3,7 @@ import { useApp } from '../../store/AppContext';
 import { calculateKwh, calculatePrice, calculateAverageConsumption } from '../../lib/eneo';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { ArrowDownUp, Info } from 'lucide-react';
-import { cn } from '../../lib/utils';
+import { cn, sortByDate } from '../../lib/utils';
 
 type Mode = 'PRICE_TO_KWH' | 'KWH_TO_PRICE';
 
@@ -17,7 +17,7 @@ export default function CalculatorView() {
   const autoCumulConsom = currentMeter.consumptions.find(c => c.date === currentMonth)?.kwh || 0;
   
   const sortedConsumptions = useMemo(() => 
-    [...currentMeter.consumptions].sort((a, b) => a.date.localeCompare(b.date)), 
+    sortByDate(currentMeter.consumptions, 'asc'), 
   [currentMeter.consumptions]);
   
   const autoAverage6Months = useMemo(() => 

@@ -1,7 +1,8 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import { AppState, Consumption, Recharge, MeterData } from "../types";
 import { INITIAL_STATE, DEFAULT_SETTINGS } from "../constants";
 import { saveUserDataToBackend, loadUserDataFromBackend } from "../lib/sync";
+import { generateAvatar } from "../lib/utils";
 import { auth } from "../lib/firebase";
 import { onAuthStateChanged, getRedirectResult } from "firebase/auth";
 
@@ -94,6 +95,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [toastInfo, setToastInfo] = useState<{ message: string, visible: boolean } | null>(null);
   const [isLoading, setLoading] = useState(false);
   const [hasLoadedFromCloud, setHasLoadedFromCloud] = useState(false);
+  const stateRef = useRef(state);
+  stateRef.current = state;
 
   useEffect(() => {
     // Handle redirect result on mount
@@ -103,7 +106,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           type: 'google',
           name: result.user.displayName || 'Utilisateur',
           email: result.user.email || '',
-          avatar: result.user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(result.user.displayName || 'U')}&background=random`,
+          avatar: result.user.photoURL || generateAvatar(result.user.displayName || ''),
           lastActive: Date.now()
         });
       }
@@ -115,7 +118,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           type: 'google',
           name: user.displayName || 'Utilisateur',
           email: user.email || '',
-          avatar: user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'U')}&background=random`,
+          avatar: user.photoURL || generateAvatar(user.displayName || ''),
           lastActive: Date.now()
         });
       }
@@ -125,14 +128,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    // Auto sync to cloud when state changes if user is google auth
     if (currentUser?.type === 'google' && hasLoadedFromCloud) {
        const timer = setTimeout(() => {
-          saveUserDataToBackend(state).catch(console.error);
+          saveUserDataToBackend(stateRef.current).catch(console.error);
        }, 5000);
        return () => clearTimeout(timer);
     }
   }, [state, currentUser, hasLoadedFromCloud]);
+
+  useEffect(() => {
+    if (currentUser?.type !== 'google' || !hasLoadedFromCloud) return;
+    const flush = () => saveUserDataToBackend(stateRef.current).catch(console.error);
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') flush();
+    };
+    window.addEventListener('pagehide', flush);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('pagehide', flush);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [currentUser, hasLoadedFromCloud]);
 
   useEffect(() => {
     if (currentUser) {

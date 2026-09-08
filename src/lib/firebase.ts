@@ -2,60 +2,81 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, signInWithRedirect, signInWithCredential } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { Capacitor } from '@capacitor/core';
-import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
+import { SocialLogin } from '@capgo/capacitor-social-login';
 import firebaseConfig from '../../firebase-applet-config.json';
 
+const GOOGLE_WEB_CLIENT_ID = '567954813184-f9rqmje9ca1vckqopim7rl93mlrepq7a.apps.googleusercontent.com';
+const isNativePlatform = Capacitor.isNativePlatform();
+
 const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId); // CRITICAL: The app will break without this line
+export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 
+let socialLoginInit: Promise<void> | null = null;
+function ensureGoogleAuthInit() {
+  if (!socialLoginInit) {
+    socialLoginInit = SocialLogin.initialize({
+      google: {
+        webClientId: GOOGLE_WEB_CLIENT_ID,
+        mode: 'offline',
+      },
+    }).then(() => undefined);
+  }
+  return socialLoginInit;
+}
+
+const signInWithGoogleNative = async () => {
+  await ensureGoogleAuthInit();
+  const res = await SocialLogin.login({
+    provider: 'google',
+    options: { scopes: ['email', 'profile'] },
+  });
+  if (res.provider !== 'google' || !res.result.idToken) {
+    throw new Error('Connexion Google annulée ou aucun jeton reçu.');
+  }
+  const credential = GoogleAuthProvider.credential(res.result.idToken);
+  return (await signInWithCredential(auth, credential)).user;
+};
+
 export const signInWithGoogle = async () => {
   try {
-    const isMobile = Capacitor.isNativePlatform() || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    if (isMobile) {
-      await GoogleAuth.initialize({
-        clientId: '567954813184-f9rqmje9ca1vckqopim7rl93mlrepq7a.apps.googleusercontent.com',
-        scopes: ['profile', 'email'],
-        grantOfflineAccess: true,
-      });
-      const googleUser = await GoogleAuth.signIn();
-      const credential = GoogleAuthProvider.credential(googleUser.authentication.idToken);
-      const result = await signInWithCredential(auth, credential);
-      return result.user;
+    if (isNativePlatform) {
+      return await signInWithGoogleNative();
     }
 
-    // Web : popup classique
-    const result = await signInWithPopup(auth, googleProvider);
-    return result.user;
-  } catch (error: any) {
-    console.error("Error signing in with Google", error);
-    // Erreur code 10 est souvent liée au plugin Capacitor sur Web mobile mal configuré
-    // On force le fallback Firebase SDK si possible
-    if (error.code === '10' || error.code === 'auth/popup-blocked' || error.code === 'auth/operation-not-supported-in-this-environment') {
-      try {
+    // Web / PWA : popup classique, redirection en secours
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      return result.user;
+    } catch (error: any) {
+      if (error?.code === 'auth/popup-blocked' || error?.code === 'auth/operation-not-supported-in-this-environment') {
         await signInWithRedirect(auth, googleProvider);
         return null;
-      } catch (redirectError) {
-        console.error("Redirect error", redirectError);
-        throw redirectError;
       }
+      throw error;
     }
+  } catch (error: any) {
+    if (isNativePlatform && error?.code === '10') {
+      console.error('Google sign-in failed: Android client not configured', error);
+      throw new Error(
+        'Connexion Google indisponible : configuration Android manquante (google-services.json ou client OAuth Android). Voir la procédure de configuration.'
+      );
+    }
+    console.error('Error signing in with Google', error);
     throw error;
   }
 };
 
 export const logOut = async () => {
   try {
-    const isMobile = Capacitor.isNativePlatform() || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    if (isMobile) {
-      await GoogleAuth.signOut();
+    if (isNativePlatform) {
+      await SocialLogin.logout({ provider: 'google' });
     }
-    await signOut(auth);
   } catch (error) {
-    console.error('Error signing out', error);
-    throw error;
+    console.error('Error signing out from Google provider', error);
   }
+  await signOut(auth);
 };
 
 export enum OperationType {
@@ -67,40 +88,12 @@ export enum OperationType {
   WRITE = 'write',
 }
 
-interface FirestoreErrorInfo {
-  error: string;
-  operationType: OperationType;
-  path: string | null;
-  authInfo: {
-    userId?: string | null;
-    email?: string | null;
-    emailVerified?: boolean | null;
-    isAnonymous?: boolean | null;
-    tenantId?: string | null;
-    providerInfo?: {
-      providerId?: string | null;
-      email?: string | null;
-    }[];
-  }
-}
-
 export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
-  const errInfo: FirestoreErrorInfo = {
+  const errInfo = {
     error: error instanceof Error ? error.message : String(error),
-    authInfo: {
-      userId: auth.currentUser?.uid,
-      email: auth.currentUser?.email,
-      emailVerified: auth.currentUser?.emailVerified,
-      isAnonymous: auth.currentUser?.isAnonymous,
-      tenantId: auth.currentUser?.tenantId,
-      providerInfo: auth.currentUser?.providerData?.map(provider => ({
-        providerId: provider.providerId,
-        email: provider.email,
-      })) || []
-    },
     operationType,
     path
-  }
+  };
   console.error('Firestore Error: ', JSON.stringify(errInfo));
   throw new Error(JSON.stringify(errInfo));
 }

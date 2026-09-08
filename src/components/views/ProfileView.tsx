@@ -6,6 +6,7 @@ import { logOut } from '../../lib/firebase';
 import { Dialog } from '@capacitor/dialog';
 import { Camera, CameraSource, CameraResultType } from '@capacitor/camera';
 import SourcePicker from '../ui/SourcePicker';
+import { compressImage } from '../../lib/utils';
 
 export default function ProfileView() {
   const { currentMeter, updateProfile, state, addMeter, deleteMeter, switchMeter, updateMeterName, showToast, currentUser, setCurrentUser } = useApp();
@@ -61,7 +62,7 @@ export default function ProfileView() {
       });
 
       if (image && image.base64String) {
-        const base64 = `data:image/${image.format};base64,${image.base64String}`;
+        const base64 = await compressImage(`data:image/${image.format};base64,${image.base64String}`);
         setLocalProfile(prev => ({ ...prev, [targetPhoto]: base64 }));
         if (targetPhoto === 'photoProfile') {
           updateProfile({ photoProfile: base64 });
@@ -79,8 +80,8 @@ export default function ProfileView() {
     const file = e.target.files?.[0];
     if (file && targetPhoto) {
       const reader = new FileReader();
-      reader.onload = (evt) => {
-        const base64 = evt.target?.result as string;
+      reader.onload = async (evt) => {
+        const base64 = await compressImage(evt.target?.result as string);
         setLocalProfile(prev => ({ ...prev, [targetPhoto]: base64 }));
         if (targetPhoto === 'photoProfile') {
           updateProfile({ photoProfile: base64 });

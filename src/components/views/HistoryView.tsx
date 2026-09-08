@@ -9,6 +9,7 @@ import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 import { Capacitor } from '@capacitor/core';
 import { Dialog } from '@capacitor/dialog';
+import { sortByDate } from '../../lib/utils';
 
 export default function HistoryView() {
   const { state, currentMeter, addConsumption, updateConsumption, deleteConsumption, addRecharge, updateRecharge, deleteRecharge, importData, showToast, clearSection, setLoading } = useApp();
@@ -199,36 +200,6 @@ export default function HistoryView() {
     reader.readAsText(file);
   };
 
-  const handleImportSampleData = () => {
-    setLoading(true);
-    setTimeout(() => {
-      // Example data provided by user
-      const consosData = [
-        {"date": "2024-06", "kwh": 288.27}, {"date": "2024-07", "kwh": 261.62}, {"date": "2024-08", "kwh": 252.66},
-        {"date": "2024-09", "kwh": 303.62}, {"date": "2024-10", "kwh": 311.91}, {"date": "2024-11", "kwh": 297.09},
-        {"date": "2024-12", "kwh": 253.70}, {"date": "2025-01", "kwh": 252.95}, {"date": "2025-02", "kwh": 265.59},
-        {"date": "2025-03", "kwh": 282.68}, {"date": "2025-04", "kwh": 261.71}, {"date": "2025-05", "kwh": 264.87},
-        {"date": "2025-06", "kwh": 239.41}, {"date": "2025-07", "kwh": 174.92}, {"date": "2025-08", "kwh": 160.77},
-        {"date": "2025-09", "kwh": 189.77},
-      ].map(c => ({ id: uuidv4(), ...c }));
-
-      const rechargesData = [
-        {"date": "2024-12-01", "montant": 23000, "kwh": 244.1}, {"date": "2024-12-31", "montant": 1200, "kwh": 12.4},
-        {"date": "2025-01-02", "montant": 23000, "kwh": 244.1}, {"date": "2025-02-01", "montant": 23000, "kwh": 244.2},
-        {"date": "2025-02-26", "montant": 2500, "kwh": 26.5}, {"date": "2025-03-01", "montant": 23000, "kwh": 244.1},
-        {"date": "2025-03-29", "montant": 3000, "kwh": 31.9}, {"date": "2025-04-01", "montant": 23000, "kwh": 244.1},
-        {"date": "2025-04-28", "montant": 2500, "kwh": 26.6}, {"date": "2025-05-02", "montant": 23000, "kwh": 244.1},
-        {"date": "2025-05-30", "montant": 2500, "kwh": 26.5}, {"date": "2025-06-02", "montant": 23000, "kwh": 244.2},
-        {"date": "2025-07-03", "montant": 23000, "kwh": 244.1}, {"date": "2025-08-16", "montant": 17000, "kwh": 180.5},
-        {"date": "2025-09-19", "montant": 17000, "kwh": 180.4}, {"date": "2025-10-13", "montant": 16000, "kwh": 169.9},
-      ].map(r => ({ id: uuidv4(), ...r }));
-
-      importData(consosData, rechargesData);
-      setLoading(false);
-      showToast('Données exemple importées avec succès !');
-    }, 800);
-  };
-
   const handleDeleteAll = async () => {
     const { value } = await Dialog.confirm({ title: 'Attention', message: `Voulez-vous supprimer toutes les données de la section ${tab === 'consommations' ? 'Consommations' : 'Recharges'} ?\nCette action est irréversible.` });
     if (value) {
@@ -237,8 +208,8 @@ export default function HistoryView() {
     }
   };
 
-  const sortedConsos = [...currentMeter.consumptions].sort((a,b) => sortOrder === 'desc' ? b.date.localeCompare(a.date) : a.date.localeCompare(b.date));
-  const sortedRecharges = [...currentMeter.recharges].sort((a,b) => sortOrder === 'desc' ? b.date.localeCompare(a.date) : a.date.localeCompare(b.date));
+  const sortedConsos = sortByDate(currentMeter.consumptions, sortOrder);
+  const sortedRecharges = sortByDate(currentMeter.recharges, sortOrder);
 
   return (
     <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300 relative pb-10">
@@ -254,9 +225,6 @@ export default function HistoryView() {
           </button>
           <button onClick={handleExport} className="text-xs flex items-center text-white bg-indigo-600 hover:bg-indigo-700 px-2 py-1 rounded">
             <Download size={14} className="mr-1" /> Exporter
-          </button>
-          <button onClick={handleImportSampleData} className="text-xs flex items-center text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 px-2 py-1 rounded border border-indigo-100 dark:border-indigo-800">
-             Démo
           </button>
         </div>
       </div>

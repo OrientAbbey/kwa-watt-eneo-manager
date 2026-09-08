@@ -19,11 +19,6 @@ const config: CapacitorConfig = {
     overrideUserAgent: "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Mobile Safari/537.36"
   },
   plugins: {
-    GoogleAuth: {
-      scopes: ['profile', 'email'],
-      serverClientId: '567954813184-f9rqmje9ca1vckqopim7rl93mlrepq7a.apps.googleusercontent.com',
-      forceCodeForRefreshToken: true,
-    },
     SplashScreen: {
       launchShowDuration: 2000,
       launchAutoHide: true,

@@ -30,7 +30,7 @@ KWA-WATT est une application logicielle de gestion de la consommation d'énergie
 ## Architecture
 L'architecture de l'application est conçue pour fonctionner comme une SPA web (Single Page Application) et une application mobile native (grâce à Capacitor). 
 La technologie est :
-- **React 18 & Vite**
+- **React 19 & Vite**
 - **Tailwind CSS** (design utilitaire robuste adaptatif pour le dark/light mode)
 - **Firebase** (Firestore et Google Authentication)
 - **Recharts** (Visualisation interactive de données financières et d'énergies)

@@ -6,6 +6,7 @@ import { LocalNotifications } from '@capacitor/local-notifications';
 import * as df from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { AlertCircle, AlertTriangle, Info } from 'lucide-react';
+import { sortByDate } from '../../lib/utils';
 
 const { format, subMonths, parseISO, addDays, getDate } = df;
 
@@ -22,7 +23,7 @@ export default function DashboardView() {
   
   // Calculate stats
   const sortedConsumptions = useMemo(() => 
-    [...currentMeter.consumptions].sort((a, b) => a.date.localeCompare(b.date)), 
+    sortByDate(currentMeter.consumptions, 'asc'), 
   [currentMeter.consumptions]);
 
   const currentMonth = format(new Date(), 'yyyy-MM');
@@ -53,7 +54,7 @@ export default function DashboardView() {
     return Math.floor(balance / dailyConso);
   }, [average6Months, totalRechargeKwh, currentConso]);
 
-  const sortedRecharges = [...currentMeter.recharges].sort((a, b) => b.date.localeCompare(a.date));
+  const sortedRecharges = sortByDate(currentMeter.recharges, 'desc');
   const lastRecharge = sortedRecharges.length > 0 ? sortedRecharges[0] : null;
 
   // Yearly Comparison Data (Last 12 months)

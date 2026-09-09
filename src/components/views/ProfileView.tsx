@@ -464,7 +464,7 @@ export default function ProfileView() {
       {fullScreenImage && (
         <div className="fixed inset-0 bg-black/90 z-[100] flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setFullScreenImage(null)}>
           <button 
-            className="absolute top-4 right-4 text-white bg-white dark:bg-slate-800/20 p-2 rounded-full hover:bg-white dark:bg-slate-800/40 transition-colors"
+            className="absolute top-4 right-4 text-white bg-slate-900/40 hover:bg-slate-900/60 dark:bg-slate-800/20 dark:hover:bg-slate-800/40 p-2 rounded-full transition-colors"
             onClick={() => setFullScreenImage(null)}
           >
             <X size={24} />

@@ -2,12 +2,12 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { useApp } from '../../store/AppContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Line, CartesianGrid, Legend, ComposedChart } from 'recharts';
-import { LocalNotifications } from '@capacitor/local-notifications';
 import * as df from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { AlertCircle, AlertTriangle, Info } from 'lucide-react';
 import { sortByDate } from '../../lib/utils';
 import { getAlerts } from '../../lib/alerts';
+import { notifyAlerts } from '../../lib/notifications';
 import { Consumption, Recharge } from '../../types';
 
 const { format, subMonths, parseISO, addDays } = df;
@@ -89,34 +89,9 @@ export default function DashboardView() {
   const alerts = useMemo(() => getAlerts(state, currentMeter), [state, currentMeter]);
 
   useEffect(() => {
-    const notifyUser = async () => {
-      if (state.settings.alerts?.enableNotifications && alerts.length > 0) {
-        try {
-          const status = await LocalNotifications.checkPermissions();
-          if (status.display === 'granted') {
-            const today = new Date().toISOString().split('T')[0];
-            const lastNotif = localStorage.getItem('last_alert_notif');
-            
-            if (lastNotif !== today) {
-              const notifications = alerts.map((a, i) => ({
-                id: Math.floor(Math.random() * 10000) + i, 
-                title: a.title,
-                body: a.message,
-                schedule: { at: new Date(Date.now() + 1000 * (i + 1)) },
-                ongoing: a.id === 'start',
-                autoCancel: a.id !== 'start'
-              }));
-              
-              await LocalNotifications.schedule({ notifications });
-              localStorage.setItem('last_alert_notif', today);
-            }
-          }
-        } catch (e) {
-          console.error("Local notifications failed", e);
-        }
-      }
-    };
-    notifyUser();
+    if (state.settings.alerts?.enableNotifications) {
+      notifyAlerts(alerts).catch((e) => console.error('Notifications failed', e));
+    }
   }, [alerts, state.settings.alerts?.enableNotifications]);
 
   const consumptionStatus = useMemo(() => {

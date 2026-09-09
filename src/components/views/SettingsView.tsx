@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { Settings as SettingsIcon, Save, RefreshCcw, Bell } from 'lucide-react';
 import { DEFAULT_SETTINGS, DEFAULT_ALERTS } from '../../constants';
 import { Dialog } from '@capacitor/dialog';
+import { notificationsSupported, requestNotificationPermission } from '../../lib/notifications';
 
 export default function SettingsView() {
   const { state, updateSettings, resetData, showToast } = useApp();
@@ -296,23 +297,27 @@ export default function SettingsView() {
           </div>
           <div className="flex items-center justify-between mt-4 border-t pt-4">
             <div className="mr-4">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Notifications Push</label>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Autoriser le navigateur à envoyer des alertes.</p>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Notifications</label>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Alertes de consommation (début de mois, seuils, hausse brutale).</p>
             </div>
             <input 
               type="checkbox" 
               checked={alerts.enableNotifications} 
               onChange={async (e) => {
                 const checked = e.target.checked;
-                if (checked && 'Notification' in window) {
-                   const perm = await Notification.requestPermission();
-                   if (perm === 'granted') {
-                     setAlerts(s => ({...s, enableNotifications: true}));
-                   } else {
-                     showToast('Permission refusée par le navigateur.');
-                   }
+                if (checked) {
+                  if (!notificationsSupported()) {
+                    showToast('Notifications non supportées sur cet appareil.');
+                    return;
+                  }
+                  const granted = await requestNotificationPermission();
+                  if (granted) {
+                    setAlerts(s => ({...s, enableNotifications: true}));
+                  } else {
+                    showToast('Permission refusée.');
+                  }
                 } else {
-                   setAlerts(s => ({...s, enableNotifications: false}));
+                  setAlerts(s => ({...s, enableNotifications: false}));
                 }
               }} 
               className="w-5 h-5"

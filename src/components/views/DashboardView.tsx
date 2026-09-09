@@ -7,6 +7,7 @@ import * as df from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { AlertCircle, AlertTriangle, Info } from 'lucide-react';
 import { sortByDate } from '../../lib/utils';
+import { Consumption, Recharge } from '../../types';
 
 const { format, subMonths, parseISO, addDays, getDate } = df;
 
@@ -23,7 +24,7 @@ export default function DashboardView() {
   
   // Calculate stats
   const sortedConsumptions = useMemo(() => 
-    sortByDate(currentMeter.consumptions, 'asc'), 
+    sortByDate<Consumption>(currentMeter.consumptions, 'asc'), 
   [currentMeter.consumptions]);
 
   const currentMonth = format(new Date(), 'yyyy-MM');
@@ -54,7 +55,7 @@ export default function DashboardView() {
     return Math.floor(balance / dailyConso);
   }, [average6Months, totalRechargeKwh, currentConso]);
 
-  const sortedRecharges = sortByDate(currentMeter.recharges, 'desc');
+  const sortedRecharges = sortByDate<Recharge>(currentMeter.recharges, 'desc');
   const lastRecharge = sortedRecharges.length > 0 ? sortedRecharges[0] : null;
 
   // Yearly Comparison Data (Last 12 months)

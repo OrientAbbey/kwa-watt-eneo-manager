@@ -4,6 +4,7 @@ import { calculateKwh, calculatePrice, calculateAverageConsumption } from '../..
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { ArrowDownUp, Info } from 'lucide-react';
 import { cn, sortByDate } from '../../lib/utils';
+import { Consumption } from '../../types';
 
 type Mode = 'PRICE_TO_KWH' | 'KWH_TO_PRICE';
 
@@ -17,7 +18,7 @@ export default function CalculatorView() {
   const autoCumulConsom = currentMeter.consumptions.find(c => c.date === currentMonth)?.kwh || 0;
   
   const sortedConsumptions = useMemo(() => 
-    sortByDate(currentMeter.consumptions, 'asc'), 
+    sortByDate<Consumption>(currentMeter.consumptions, 'asc'), 
   [currentMeter.consumptions]);
   
   const autoAverage6Months = useMemo(() => 

@@ -10,6 +10,7 @@ import { Share } from '@capacitor/share';
 import { Capacitor } from '@capacitor/core';
 import { Dialog } from '@capacitor/dialog';
 import { sortByDate } from '../../lib/utils';
+import { Consumption, Recharge } from '../../types';
 
 export default function HistoryView() {
   const { state, currentMeter, addConsumption, updateConsumption, deleteConsumption, addRecharge, updateRecharge, deleteRecharge, importData, showToast, clearSection, setLoading } = useApp();
@@ -208,8 +209,8 @@ export default function HistoryView() {
     }
   };
 
-  const sortedConsos = sortByDate(currentMeter.consumptions, sortOrder);
-  const sortedRecharges = sortByDate(currentMeter.recharges, sortOrder);
+  const sortedConsos = sortByDate<Consumption>(currentMeter.consumptions, sortOrder);
+  const sortedRecharges = sortByDate<Recharge>(currentMeter.recharges, sortOrder);
 
   return (
     <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300 relative pb-10">

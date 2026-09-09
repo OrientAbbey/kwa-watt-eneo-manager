@@ -1,10 +1,10 @@
 {
-  "projectId": "gen-lang-client-0507777932",
-  "appId": "1:567954813184:web:33fe54573d94b1cfb703e5",
-  "apiKey": "AIzaSyCfRjHjQL4TG-mTmcXzcsIu5GRDKFx_bVE",
-  "authDomain": "gen-lang-client-0507777932.firebaseapp.com",
-  "firestoreDatabaseId": "ai-studio-c4996bb1-36e0-417b-9ec5-878d4a283669",
-  "storageBucket": "gen-lang-client-0507777932.firebasestorage.app",
-  "messagingSenderId": "567954813184",
+  "projectId": "kwa-watt-eneo-manager",
+  "appId": "1:186942591566:web:3eba92acea882bff12a91f",
+  "apiKey": "AIzaSyBcEpU2NNiBPae4WeAP_x_TtHAoTEgdFig",
+  "authDomain": "kwa-watt-eneo-manager.firebaseapp.com",
+  "firestoreDatabaseId": "(default)",
+  "storageBucket": "kwa-watt-eneo-manager.firebasestorage.app",
+  "messagingSenderId": "186942591566",
   "measurementId": ""
 }

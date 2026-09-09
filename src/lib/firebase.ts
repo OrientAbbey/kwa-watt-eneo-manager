@@ -32,7 +32,7 @@ const signInWithGoogleNative = async () => {
     provider: 'google',
     options: { scopes: [...appConfig.google.scopes] },
   });
-  if (res.provider !== 'google' || !res.result.idToken) {
+  if (res.provider !== 'google' || res.result.responseType !== 'online' || !res.result.idToken) {
     throw new Error('Connexion Google annulée ou aucun jeton reçu.');
   }
   const credential = GoogleAuthProvider.credential(res.result.idToken);

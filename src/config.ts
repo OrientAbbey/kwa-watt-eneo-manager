@@ -21,9 +21,9 @@ export const appConfig = {
 
   google: {
     webClientId:
-      '567954813184-f9rqmje9ca1vckqopim7rl93mlrepq7a.apps.googleusercontent.com',
+      '186942591566-0ue10qur7se9aa19mros6otp1av2ghc3.apps.googleusercontent.com',
     scopes: ['email', 'profile'],
-    loginMode: 'offline',
+    loginMode: 'online',
   },
 
   storage: {

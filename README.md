@@ -4,6 +4,7 @@ Application de gestion de l'électricité prépayée ENEO : suivi de la consomma
 
 - **Stack** : React 19 · Vite 6 · TypeScript · Tailwind CSS 4 · Firebase (Auth + Firestore) · Recharts
 - **Mobile** : Capacitor 8 (Android · applicationId `com.eneotool.app`)
+- **Backend** : projet Firebase dédié **`kwa-watt-eneo-manager`** (`186942591566`) — Google Auth + Firestore `(default)` en `europe-west1`, règles déjà déployées
 
 ## Prérequis
 
@@ -39,7 +40,9 @@ Le CI (`.github/workflows/android-build.yml`) compile aussi un APK debug à chaq
 
 La connexion Google sur Android repose sur le **client OAuth** (Web Client ID) et le fichier **`google-services.json`**. S'ils sont manquants, Google renvoie l'erreur développeur `10`.
 
-📖 **La procédure complète** (création d'un projet Firebase dédié, console Google Cloud, mise à jour des identifiants, tests et dépannage) est détaillée dans **[`GOOGLE_AUTH_SETUP.md`](./GOOGLE_AUTH_SETUP.md)**.
+📖 **La procédure complète** (projet Firebase dédié, console Google Cloud, mise à jour des identifiants, tests et dépannage) est détaillée dans **[`GOOGLE_AUTH_SETUP.md`](./GOOGLE_AUTH_SETUP.md)** — l'**état actuel** (valeurs réelles du projet `kwa-watt-eneo-manager`, apps Android/Web, Web Client ID) est dans sa **section 3.0**.
+
+✅ **Déjà configuré** : projet dédié créé, Google Auth activé, app Android + Web enregistrées, `google-services.json` en place (`android/app/`), Web Client ID et `loginMode: 'online'` dans `src/config.ts`, règles Firestore déployées.
 
 En bref :
 1. **Console Firebase** → crée un projet dédié → active **Google Authentication** + **Firestore**.

@@ -40,13 +40,10 @@ jobs:
         gradle-version: '8.14.3'
 
     - name: Install npm dependencies
-      run: npm install
+      run: npm ci
 
     - name: Build Web App
       run: npm run build
-
-    - name: Install Capacitor Assets
-      run: npm install -g @capacitor/assets
 
     - name: Generate Android Assets
       run: npx @capacitor/assets generate --android --assetPath public

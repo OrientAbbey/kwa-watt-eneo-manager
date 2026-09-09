@@ -25,6 +25,7 @@ service cloud.firestore {
                     && isValidId(userId)
                     && isValidUserData(incoming())
                     && incoming().diff(existing()).affectedKeys().hasOnly(['state', 'updatedAt']);
+      allow delete: if isSignedIn() && request.auth.uid == userId && isValidId(userId);
     }
   }
 }

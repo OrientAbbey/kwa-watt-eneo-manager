@@ -40,9 +40,9 @@ Toutes les valeurs configurables du projet sont centralisées dans **deux fichie
 export const appConfig = {
   appId: 'com.eneotool.app',           // identifiant unique de l'app Android
   google: {
-    webClientId: '…apps.googleusercontent.com',  // Web Client ID OAuth 2.0 (Google Cloud)
+    webClientId: '186942591566-0ue10qur7se9aa19mros6otp1av2ghc3.apps.googleusercontent.com',  // Web Client ID OAuth 2.0 (Google Cloud)
     scopes: ['email', 'profile'],
-    loginMode: 'offline',
+    loginMode: 'online',               // 'online' renvoie l'ID Token (requis pour Firebase Auth côté client)
   },
   storage: {
     authMaxAgeMs: 30 * 24 * 60 * 60 * 1000,   // session locale expirée après 30 jours
@@ -62,27 +62,48 @@ Il est consommé par :
 
 ```jsonc
 {
-  "apiKey": "…",                     // clé publique web (restreignable dans Google Cloud)
-  "authDomain": "…firebaseapp.com",
-  "projectId": "…",
-  "storageBucket": "…",
-  "messagingSenderId": "…",
-  "appId": "1:…:web:…",
-  "firestoreDatabaseId": "…"         // IMPORTANT — id de la base Firestore ("(default)" est vu comme "")
+  "apiKey": "AIzaSyBcEpU2NNiBPae4WeAP_x_TtHAoTEgdFig",  // clé publique web (restreignable dans Google Cloud)
+  "authDomain": "kwa-watt-eneo-manager.firebaseapp.com",
+  "projectId": "kwa-watt-eneo-manager",
+  "storageBucket": "kwa-watt-eneo-manager.firebasestorage.app",
+  "messagingSenderId": "186942591566",
+  "appId": "1:186942591566:web:3eba92acea882bff12a91f",
+  "firestoreDatabaseId": "(default)"  // base par défaut en europe-west1 (voir section 3.3)
+  // "measurementId": "" (absent — Analytics non activé)
 }
 ```
 
+> Ces valeurs reflètent l'état actuel du projet dédié **`kwa-watt-eneo-manager`** (section 3).
+
 Consommé par `src/lib/firebase.ts` (`initializeApp` + `getFirestore`).
 
-> ⚠️ Ces deux fichiers référencent actuellement le **projet AI Studio** `gen-lang-client-0507777932`. Pour une app en production, il faut créer un **projet Firebase dédié** (section 3) et mettre à jour ces deux fichiers.
+> ✅ **Migration effectuée.** Depuis le 09/09/2026, les deux fichiers référencent le **projet dédié `kwa-watt-eneo-manager`** (numéro de projet `186942591566`). Les sections ci-dessous restent valables comme procédure, et l'état actuel réel est rappelé à la section **3.0**.
 
 ---
 
 ## 3. Création du projet Firebase dédié
 
-> **Pourquoi migrer ?** Le projet actuel (`gen-lang-client-0507777932`, base `ai-studio-c4996bb1-…`) est un projet temporaire généré par AI Studio. Les données personnelles des utilisateurs (photos de compteurs, historique) y seraient stockées sans contrôle. Un projet Firebase dédié te donne la propriété complète (facturation tiers 0 possible, règles de sécurité, monitoring).
+> **Pourquoi migrer ?** Le projet d'origine (`gen-lang-client-0507777932`, base `ai-studio-c4996bb1-…`) était un projet temporaire généré par AI Studio. Un projet Firebase dédié donne la propriété complète (facturation tiers 0 possible, règles de sécurité, monitoring).
 
-### 3.1 Créer le projet
+### 3.0 État actuel du projet dédié (09/09/2026)
+
+| Élément | Valeur |
+|---|---|
+| Project ID | `kwa-watt-eneo-manager` |
+| Numéro de projet | `186942591566` |
+| App Android | `1:186942591566:android:368d9eb0926b689812a91f` (`com.eneotool.app`) |
+| App Web | `1:186942591566:web:3eba92acea882bff12a91f` |
+| API Key (Android) | `AIzaSyANufE5Gf7F5CwijLDdJsbFe2Fn618hwJQ` |
+| API Key (Web) | `AIzaSyBcEpU2NNiBPae4WeAP_x_TtHAoTEgdFig` |
+| Web Client ID (Google) | `186942591566-0ue10qur7se9aa19mros6otp1av2ghc3.apps.googleusercontent.com` |
+| Auth Domain | `kwa-watt-eneo-manager.firebaseapp.com` |
+| Firestore | base `(default)` en **europe-west1** — règles déployées via `firebase deploy --only firestore:rules` |
+| Google Auth | ✅ activé (Identity Toolkit) |
+| `google-services.json` | présent dans `android/app/` *(exclu de git)* |
+
+> Le **client secret** web OAuth est disponible dans la console Google Cloud (Identifiants). Il n'est pas utilisé côté app (le plugin renvoie uniquement l'ID Token) et **ne doit pas être commité**. Le SHA-1 debug reste à vérifier (section 3.4, point 3) pour un premier build APK local.
+
+### 3.1 Procédure
 
 1. Va sur [console.firebase.google.com](https://console.firebase.google.com) → **Ajouter un projet**.
 2. Donne un nom (ex. `kwa-watt-prod`), suis l'assistant (Google Analytics **non requis**).
@@ -141,18 +162,19 @@ Consommé par `src/lib/firebase.ts` (`initializeApp` + `getFirestore`).
 
 ## 5. Mettre à jour la configuration dans le code
 
-Après la création du nouveau projet, deux fichiers à modifier :
+✅ **Déjà effectué** pour le projet `kwa-watt-eneo-manager` (valeurs réelles en section 3.0). Procédure pour un autre projet :
 
 ### 5.1 `firebase-applet-config.json`
 
-Remplace toutes les valeurs de l'ancien projet AI Studio par celles du **nouveau** projet. Tu les retrouves dans : **Paramètres du projet → Vos applications → application Web** (ou génère-en une nouvelle).
-Pense à `firestoreDatabaseId` (section 3.3) : si la console affiche `(default)`, mets la chaîne vide `""`, sinon mets l'ID exact de la base créée.
+Remplace toutes les valeurs par celles du **nouveau** projet. Tu les retrouves dans : **Paramètres du projet → Vos applications → application Web** (ou génère-en une nouvelle).
+Pense à `firestoreDatabaseId` (section 3.3) : si la console affiche `(default)`, mets la valeur `"(default)"`, sinon mets l'ID exact de la base créée.
 
 ### 5.2 `src/config.ts`
 
 ```ts
 google: {
   webClientId: 'TON_NEW_WEB_CLIENT_ID.apps.googleusercontent.com',
+  loginMode: 'online',   // obligatoire : le mode 'offline' ne renvoie pas d'ID Token côté client
   …
 },
 ```
@@ -174,11 +196,11 @@ match /user_data/{userId} {
 }
 ```
 
-Déploiement via CLI (optionnel) :
+Déploiement via CLI (**déjà fait** sur `kwa-watt-eneo-manager`) :
 
 ```bash
 npx firebase-tools login
-npx firebase-tools deploy --only firestore:rules --project <projectId>
+npx firebase-tools deploy --only firestore:rules --project kwa-watt-eneo-manager
 ```
 
 ---
@@ -226,7 +248,7 @@ Le **CI GitHub** (`.github/workflows/android-build.yml`) reproduit ce pipeline �
 
 ### 8.1 Erreur `10` (Developer error) au clic Google
 
-C'est la cause initiale du bug sur mobile. Combinaison de 3 problèmes historiques (tous corrigés dans le code, reste la config) :
+C'est la cause initiale du bug sur mobile. Combinaison de 4 problèmes historiques (tous corrigés dans le code, reste la config) :
 
 | Cause | Symptôme | Correction |
 |---|---|---|
@@ -268,6 +290,7 @@ npx cap sync android
 - Les règles Firestore doivent toujours valider `request.auth.uid == userId`.
 - La session locale expire après `authMaxAgeMs` (30 jours par défaut, réglable dans `src/config.ts`).
 - Les photos capturées sont compressées avant sauvegarde (documents Firestore < 1 Mo).
+- 🔒 **Revue sécurité 09/09/2026** : pas de secret committé (le client secret OAuth web reste hors repo) ; suppression autorisée sur son propre doc Firestore (`allow delete`), `npm ci` en CI (lockfile figé). `npm audit` signale 7 vulns dans `@capacitor/assets` (sharp/tar/uuid — **dev-only**, jamais embarquées dans l'APK ni le bundle web) : risque **accepté**, à revoir à la prochaine montée de version de `@capacitor/assets`.
 
 ---
 

@@ -7,9 +7,10 @@ import * as df from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { AlertCircle, AlertTriangle, Info } from 'lucide-react';
 import { sortByDate } from '../../lib/utils';
+import { getAlerts } from '../../lib/alerts';
 import { Consumption, Recharge } from '../../types';
 
-const { format, subMonths, parseISO, addDays, getDate } = df;
+const { format, subMonths, parseISO, addDays } = df;
 
 import { calculatePrice } from '../../lib/eneo';
 
@@ -84,24 +85,8 @@ export default function DashboardView() {
     return data;
   }, [currentMeter.consumptions, currentMeter.recharges, average6Months, state.settings]);
 
-  // Alerts logic
-  const alerts = [];
-  const currentDay = getDate(new Date());
-  const startDay = state.settings.alerts?.startOfMonthDays?.[0] ?? 1;
-  const endDay = state.settings.alerts?.startOfMonthDays?.[1] ?? 5;
-  
-  if (state.settings.alerts?.startOfMonth && currentDay >= startDay && currentDay <= endDay) {
-    alerts.push({ id: 'start', type: 'info', title: "Début du mois", message: "N'oubliez pas de vérifier votre crédit et de recharger si nécessaire." });
-  }
-  if (state.settings.alerts?.highConsumptionThreshold && currentConso >= state.settings.alerts.highConsumptionThreshold) {
-    alerts.push({ id: 'high', type: 'warning', title: "Seuil de consommation élevé", message: `Vous avez dépassé votre seuil d'alerte de ${state.settings.alerts.highConsumptionThreshold} kWh.` });
-  }
-  if (state.settings.alerts?.anomalyPercentage && lastMonthConso > 0) {
-    const thresholdKwh = lastMonthConso * (1 + state.settings.alerts.anomalyPercentage / 100);
-    if (currentConso > thresholdKwh) {
-      alerts.push({ id: 'anomaly', type: 'error', title: "Hausse brutale détectée", message: `Votre consommation actuelle est anormalement plus élevée (+${Math.round(((currentConso / lastMonthConso) - 1) * 100)}%) que le mois précédent.` });
-    }
-  }
+  // Alerts logic (pure, shared with notifications)
+  const alerts = useMemo(() => getAlerts(state, currentMeter), [state, currentMeter]);
 
   useEffect(() => {
     const notifyUser = async () => {
@@ -132,7 +117,7 @@ export default function DashboardView() {
       }
     };
     notifyUser();
-  }, [JSON.stringify(alerts), state.settings.alerts?.enableNotifications]);
+  }, [alerts, state.settings.alerts?.enableNotifications]);
 
   const consumptionStatus = useMemo(() => {
     if (currentConso === 0) return null;

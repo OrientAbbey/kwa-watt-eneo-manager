@@ -3,6 +3,7 @@ import { AppState, Consumption, Recharge, MeterData } from "../types";
 import { INITIAL_STATE, DEFAULT_SETTINGS } from "../constants";
 import { saveUserDataToBackend, loadUserDataFromBackend } from "../lib/sync";
 import { generateAvatar } from "../lib/utils";
+import { appConfig } from "../config";
 import { auth } from "../lib/firebase";
 import { onAuthStateChanged, getRedirectResult } from "firebase/auth";
 
@@ -44,8 +45,8 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-const STORAGE_KEY = "eneo_app_data";
-const AUTH_KEY = "eneo_app_auth";
+const STORAGE_KEY = appConfig.storage.dataKey;
+const AUTH_KEY = appConfig.storage.authKey;
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<UserAuth | null>(() => {
@@ -53,7 +54,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const item = window.localStorage.getItem(AUTH_KEY);
       if (item) {
         const parsed = JSON.parse(item);
-        if (Date.now() - (parsed.lastActive || 0) > 30 * 24 * 60 * 60 * 1000) {
+        if (Date.now() - (parsed.lastActive || 0) > appConfig.storage.authMaxAgeMs) {
            return null;
         }
         return { ...parsed, lastActive: Date.now() };
@@ -131,7 +132,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (currentUser?.type === 'google' && hasLoadedFromCloud) {
        const timer = setTimeout(() => {
           saveUserDataToBackend(stateRef.current).catch(console.error);
-       }, 5000);
+       }, appConfig.storage.syncDebounceMs);
        return () => clearTimeout(timer);
     }
   }, [state, currentUser, hasLoadedFromCloud]);

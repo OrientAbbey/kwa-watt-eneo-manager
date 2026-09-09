@@ -9,3 +9,6 @@ coverage/
 
 # Android SDK command-line tools (adb, fastboot, etc.) - not project source
 platform-tools/
+
+# Firebase native config (contains project credentials) - never commit
+google-services.json

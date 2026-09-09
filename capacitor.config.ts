@@ -1,22 +1,18 @@
 import { CapacitorConfig } from '@capacitor/cli';
+import { appConfig } from './src/config';
 
 const config: CapacitorConfig = {
-  appId: 'com.eneotool.app',
-  appName: 'KWA-WATT',
+  appId: appConfig.appId,
+  appName: appConfig.appName,
   webDir: 'dist',
   server: {
-    hostname: 'ais-dev-buyvskluje4oym46nxby6x-11187875243.europe-west1.run.app',
-    androidScheme: 'https',
-    iosScheme: 'https',
-    allowNavigation: [
-      '*.firebaseapp.com',
-      'accounts.google.com',
-      '*.googleapis.com',
-      '*.google.com'
-    ],
+    hostname: appConfig.server.hostname,
+    androidScheme: appConfig.server.androidScheme,
+    iosScheme: appConfig.server.iosScheme,
+    allowNavigation: [...appConfig.server.allowNavigation],
   },
   android: {
-    overrideUserAgent: "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Mobile Safari/537.36"
+    overrideUserAgent: appConfig.android.overrideUserAgent,
   },
   plugins: {
     SplashScreen: {

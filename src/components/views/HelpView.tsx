@@ -5,6 +5,7 @@ import { HelpCircle, Calculator, Zap, Database, Link as LinkIcon, Image as Image
 import { Camera, CameraSource, CameraResultType } from '@capacitor/camera';
 import SourcePicker from '../ui/SourcePicker';
 import { compressImage } from '../../lib/utils';
+import { appConfig } from '../../config';
 
 export default function HelpView() {
   const { state, updateHelpImages } = useApp();
@@ -215,10 +216,10 @@ export default function HelpView() {
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             {/* Default system images */}
             {[
-              new URL('/assets/help/eneo_6_months.jpg', import.meta.url).href,
-              new URL('/assets/help/eneo_6_months_eng.jpg', import.meta.url).href,
-              new URL('/assets/help/eneo_consumption_rate.jpg', import.meta.url).href,
-              new URL('/assets/help/eneo_consumption_rate_eng.jpg', import.meta.url).href
+              new URL(`${appConfig.assets.helpImagesPath}/eneo_6_months.jpg`, import.meta.url).href,
+              new URL(`${appConfig.assets.helpImagesPath}/eneo_6_months_eng.jpg`, import.meta.url).href,
+              new URL(`${appConfig.assets.helpImagesPath}/eneo_consumption_rate.jpg`, import.meta.url).href,
+              new URL(`${appConfig.assets.helpImagesPath}/eneo_consumption_rate_eng.jpg`, import.meta.url).href
             ].map((imgUrl, idx) => (
               <div key={`default-${idx}`} className="relative group border border-slate-200 dark:border-slate-600 rounded-lg overflow-hidden aspect-square cursor-pointer" onClick={() => setFullScreenImage(imgUrl)}>
                 <img src={imgUrl} alt={`Aide Eneo ${idx}`} className="w-full h-full object-cover" />

@@ -3,9 +3,9 @@ import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, signInWithRedire
 import { getFirestore } from 'firebase/firestore';
 import { Capacitor } from '@capacitor/core';
 import { SocialLogin } from '@capgo/capacitor-social-login';
+import { appConfig } from '../config';
 import firebaseConfig from '../../firebase-applet-config.json';
 
-const GOOGLE_WEB_CLIENT_ID = '567954813184-f9rqmje9ca1vckqopim7rl93mlrepq7a.apps.googleusercontent.com';
 const isNativePlatform = Capacitor.isNativePlatform();
 
 const app = initializeApp(firebaseConfig);
@@ -18,8 +18,8 @@ function ensureGoogleAuthInit() {
   if (!socialLoginInit) {
     socialLoginInit = SocialLogin.initialize({
       google: {
-        webClientId: GOOGLE_WEB_CLIENT_ID,
-        mode: 'offline',
+        webClientId: appConfig.google.webClientId,
+        mode: appConfig.google.loginMode,
       },
     }).then(() => undefined);
   }
@@ -30,7 +30,7 @@ const signInWithGoogleNative = async () => {
   await ensureGoogleAuthInit();
   const res = await SocialLogin.login({
     provider: 'google',
-    options: { scopes: ['email', 'profile'] },
+    options: { scopes: [...appConfig.google.scopes] },
   });
   if (res.provider !== 'google' || !res.result.idToken) {
     throw new Error('Connexion Google annulée ou aucun jeton reçu.');

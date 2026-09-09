@@ -1,20 +1,21 @@
 import React, { useRef, useState } from 'react';
 import { useApp } from '../../store/AppContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
-import { LogOut, Trash2, Edit3, Plus, User, Camera as CameraIcon, Hash, MapPin, Mail, X } from 'lucide-react';
-import { logOut } from '../../lib/firebase';
+import { LogOut, Trash2, Edit3, Plus, User, Camera as CameraIcon, Hash, MapPin, Mail, X, Loader2 } from 'lucide-react';
+import { logOut, deleteAccount } from '../../lib/firebase';
 import { Dialog } from '@capacitor/dialog';
 import { Camera, CameraSource, CameraResultType } from '@capacitor/camera';
 import SourcePicker from '../ui/SourcePicker';
 import { compressImage } from '../../lib/utils';
 
 export default function ProfileView() {
-  const { currentMeter, updateProfile, state, addMeter, deleteMeter, switchMeter, updateMeterName, showToast, currentUser, setCurrentUser } = useApp();
+  const { currentMeter, updateProfile, state, addMeter, deleteMeter, switchMeter, updateMeterName, showToast, currentUser, setCurrentUser, resetData } = useApp();
   const [localProfile, setLocalProfile] = useState(currentMeter.profile);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [targetPhoto, setTargetPhoto] = React.useState<'photoRecto' | 'photoVerso' | 'photoMeter' | 'photoProfile' | null>(null);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const [editingName, setEditingName] = useState(false);
   const [meterName, setMeterName] = useState(currentMeter.name);
@@ -113,6 +114,54 @@ export default function ProfileView() {
     if (value) {
       updateProfile(localProfile);
       showToast("Profil enregistré avec succès");
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (currentUser?.type === 'visitor') {
+      const { value } = await Dialog.confirm({
+        title: 'Suppression des données',
+        message: "Supprimer définitivement toutes les données de cet appareil ?",
+      });
+      if (!value) return;
+      resetData();
+      setCurrentUser(null);
+      showToast('Données locales supprimées');
+      return;
+    }
+
+    const first = await Dialog.confirm({
+      title: 'Supprimer mon compte',
+      message: "Votre compte Google KWA-WATT, vos données synchronisées dans le cloud et les données de cette application seront définitivement supprimés. Cette action est irréversible.",
+    });
+    if (!first.value) return;
+    const second = await Dialog.confirm({
+      title: 'Dernière confirmation',
+      message: "Êtes-vous absolument sûr ? Cette action ne peut pas être annulée.",
+    });
+    if (!second.value) return;
+
+    setIsDeleting(true);
+    try {
+      await deleteAccount();
+      resetData();
+      setCurrentUser(null);
+      showToast('Compte supprimé définitivement');
+    } catch (error: any) {
+      console.error('Erreur suppression du compte', error);
+      if (error?.code === 'auth/requires-recent-login') {
+        await Dialog.alert({
+          title: 'Reconnexion requise',
+          message: "Votre connexion est trop ancienne pour supprimer le compte. Déconnectez-vous puis reconnectez-vous, puis réessayez.",
+        });
+      } else {
+        await Dialog.alert({
+          title: 'Erreur',
+          message: "Impossible de supprimer le compte. Réessayez dans quelques instants.",
+        });
+      }
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -384,6 +433,30 @@ export default function ProfileView() {
             className="w-full sm:w-auto bg-indigo-600 text-white px-8 py-3 rounded-xl font-bold flex items-center justify-center space-x-2 hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200 dark:shadow-indigo-900/40 shrink-0"
           >
             <span>Enregistrer</span>
+          </button>
+        </CardContent>
+      </Card>
+
+      <Card className="border-red-200 dark:border-red-900/50 mt-6">
+        <CardHeader>
+          <CardTitle className="text-red-600 dark:text-red-400">Zone de danger</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            Supprime définitivement votre compte et toutes les données associées
+            {currentUser?.type === 'google' ? ' (synchronisation cloud et données locales)' : ' de cet appareil'}.
+          </p>
+          <button
+            onClick={handleDeleteAccount}
+            disabled={isDeleting}
+            className="w-full py-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg font-medium flex items-center justify-center space-x-2 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors border border-red-200 dark:border-red-800 disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {isDeleting ? (
+              <Loader2 size={18} className="animate-spin" />
+            ) : (
+              <Trash2 size={18} />
+            )}
+            <span>Supprimer mon compte définitivement</span>
           </button>
         </CardContent>
       </Card>

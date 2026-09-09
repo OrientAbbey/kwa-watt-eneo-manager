@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, signInWithRedirect, signInWithCredential } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, signInWithRedirect, signInWithCredential, deleteUser } from 'firebase/auth';
+import { deleteDoc, doc, getFirestore } from 'firebase/firestore';
 import { Capacitor } from '@capacitor/core';
 import { SocialLogin } from '@capgo/capacitor-social-login';
 import { appConfig } from '../config';
@@ -77,6 +77,24 @@ export const logOut = async () => {
     console.error('Error signing out from Google provider', error);
   }
   await signOut(auth);
+};
+
+/**
+ * Suppression définitive du compte : efface la synchronisation cloud (Firestore)
+ * puis supprime l'utilisateur Firebase Auth. Peut lever 'auth/requires-recent-login'
+ * si la connexion est trop ancienne.
+ */
+export const deleteAccount = async () => {
+  const user = auth.currentUser;
+  if (!user) {
+    throw new Error('Aucun utilisateur connecté.');
+  }
+  try {
+    await deleteDoc(doc(db, 'user_data', user.uid));
+  } catch (error) {
+    console.error('Failed to delete cloud data', error);
+  }
+  await deleteUser(user);
 };
 
 export enum OperationType {

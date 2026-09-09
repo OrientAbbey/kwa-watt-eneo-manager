@@ -43,6 +43,8 @@ export default function MainLayout() {
     { id: "settings", icon: Settings, label: "Paramètres" },
   ];
 
+  const sidebarItems = [...navItems, { id: "help", icon: HelpCircle, label: "Aide" }];
+
   const handleThemeToggle = () => {
     updateTheme(state.theme === 'dark' ? 'light' : 'dark');
   };
@@ -63,7 +65,7 @@ export default function MainLayout() {
         </div>
 
         <nav className="flex-1 px-4 space-y-1">
-          {navItems.map((item) => (
+          {sidebarItems.map((item) => (
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id as TabValue)}
@@ -78,18 +80,6 @@ export default function MainLayout() {
               <span>{item.label}</span>
             </button>
           ))}
-          <button
-              onClick={() => setActiveTab('help')}
-              className={cn(
-                "w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors text-left",
-                activeTab === 'help' 
-                  ? "bg-indigo-900/50 dark:bg-slate-800/50 text-white border-l-4 border-orange-500" 
-                  : "text-indigo-300 dark:text-slate-400 hover:bg-white/5 border-l-4 border-transparent"
-              )}
-            >
-              <HelpCircle size={20} className="opacity-80 shrink-0" />
-              <span>Aide</span>
-          </button>
         </nav>
 
         <div className="p-6 bg-indigo-950 dark:bg-slate-950 border-t border-indigo-900 dark:border-slate-800">

@@ -12,6 +12,36 @@ import { Dialog } from '@capacitor/dialog';
 import { sortByDate } from '../../lib/utils';
 import { Consumption, Recharge } from '../../types';
 
+interface EditableRow {
+  id: string;
+  date: string;
+  kwh?: number;
+  montant?: number;
+}
+
+interface HistoryRowProps {
+  key?: React.Key;
+  title: string;
+  subtitle: string;
+  onEdit: () => void;
+  onDelete: () => void;
+}
+
+function HistoryRow({ title, subtitle, onEdit, onDelete }: HistoryRowProps): React.ReactElement {
+  return (
+    <div className="flex justify-between items-center p-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-sm">
+      <div className="flex-1 cursor-pointer" onClick={onEdit}>
+        <p className="font-semibold text-gray-800 dark:text-gray-100 capitalize">{title}</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">{subtitle}</p>
+      </div>
+      <div className="flex gap-1">
+        <button onClick={onEdit} className="text-indigo-400 hover:text-indigo-600 p-2" aria-label="Modifier"><Edit size={16} /></button>
+        <button onClick={onDelete} className="text-red-400 hover:text-red-600 p-2" aria-label="Supprimer"><Trash2 size={16} /></button>
+      </div>
+    </div>
+  );
+}
+
 export default function HistoryView() {
   const { state, currentMeter, addConsumption, updateConsumption, deleteConsumption, addRecharge, updateRecharge, deleteRecharge, importData, showToast, clearSection, setLoading } = useApp();
 
@@ -60,7 +90,7 @@ export default function HistoryView() {
     setVal2('');
   };
 
-  const handleEdit = (item: any) => {
+  const handleEdit = (item: EditableRow) => {
     setEditingId(item.id);
     setDateStr(item.date);
     if (tab === 'consommations') {
@@ -293,42 +323,36 @@ export default function HistoryView() {
         {tab === 'consommations' ? (
           sortedConsos.length === 0 ? <div className="text-center text-gray-400 py-10 text-sm">Aucune donnée</div> :
           sortedConsos.map(c => (
-            <div key={c.id} className="flex justify-between items-center p-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-sm">
-              <div className="flex-1 cursor-pointer" onClick={() => handleEdit(c)}>
-                <p className="font-semibold text-gray-800 dark:text-gray-100 capitalize">{format(parseISO(c.date + '-01'), 'MMMM yyyy', { locale: fr })}</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">{c.kwh.toFixed(2)} kWh</p>
-              </div>
-              <div className="flex gap-1">
-                <button onClick={() => handleEdit(c)} className="text-indigo-400 hover:text-indigo-600 p-2"><Edit size={16} /></button>
-                <button onClick={async () => {
-                  const { value } = await Dialog.confirm({ title: 'Confirmation', message: "Voulez-vous supprimer cette consommation ?" });
-                  if (value) {
-                    deleteConsumption(c.id);
-                    showToast("Consommation supprimée");
-                  }
-                }} className="text-red-400 hover:text-red-600 p-2"><Trash2 size={16} /></button>
-              </div>
-            </div>
+            <HistoryRow
+              key={c.id}
+              title={format(parseISO(c.date + '-01'), 'MMMM yyyy', { locale: fr })}
+              subtitle={`${c.kwh.toFixed(2)} kWh`}
+              onEdit={() => handleEdit(c)}
+              onDelete={async () => {
+                const { value } = await Dialog.confirm({ title: 'Confirmation', message: "Voulez-vous supprimer cette consommation ?" });
+                if (value) {
+                  deleteConsumption(c.id);
+                  showToast("Consommation supprimée");
+                }
+              }}
+            />
           ))
         ) : (
           sortedRecharges.length === 0 ? <div className="text-center text-gray-400 py-10 text-sm">Aucune donnée</div> :
           sortedRecharges.map(r => (
-            <div key={r.id} className="flex justify-between items-center p-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-sm">
-              <div className="flex-1 cursor-pointer" onClick={() => handleEdit(r)}>
-                <p className="font-semibold text-gray-800 dark:text-gray-100">{format(parseISO(r.date), 'dd MMM yyyy', { locale: fr })}</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400 font-mono">{r.montant.toLocaleString()} FCFA • {r.kwh.toFixed(1)} kWh</p>
-              </div>
-              <div className="flex gap-1">
-                <button onClick={() => handleEdit(r)} className="text-indigo-400 hover:text-indigo-600 p-2"><Edit size={16} /></button>
-                <button onClick={async () => {
-                  const { value } = await Dialog.confirm({ title: 'Confirmation', message: "Voulez-vous supprimer cette recharge ?" });
-                  if (value) {
-                    deleteRecharge(r.id);
-                    showToast("Recharge supprimée");
-                  }
-                }} className="text-red-400 hover:text-red-600 p-2"><Trash2 size={16} /></button>
-              </div>
-            </div>
+            <HistoryRow
+              key={r.id}
+              title={format(parseISO(r.date), 'dd MMM yyyy', { locale: fr })}
+              subtitle={`${r.montant.toLocaleString()} FCFA • ${r.kwh.toFixed(1)} kWh`}
+              onEdit={() => handleEdit(r)}
+              onDelete={async () => {
+                const { value } = await Dialog.confirm({ title: 'Confirmation', message: "Voulez-vous supprimer cette recharge ?" });
+                if (value) {
+                  deleteRecharge(r.id);
+                  showToast("Recharge supprimée");
+                }
+              }}
+            />
           ))
         )}
       </div>

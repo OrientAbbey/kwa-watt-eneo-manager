@@ -1,59 +1,19 @@
-import React, { useRef, useState } from 'react';
+import React from 'react';
 import { useApp } from '../../store/AppContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
-import { HelpCircle, Calculator, Zap, Database, Link as LinkIcon, Image as ImageIcon, Trash2, Plus, Phone, Mail, X } from 'lucide-react';
-import { Camera, CameraSource, CameraResultType } from '@capacitor/camera';
-import SourcePicker from '../ui/SourcePicker';
-import { compressImage } from '../../lib/utils';
+import { HelpCircle, Calculator, Zap, Database, Link as LinkIcon, Image as ImageIcon, Trash2, Plus, Phone, Mail } from 'lucide-react';
+import { useImagePicker } from '../../hooks/useImagePicker';
+import ImageViewer from '../ui/ImageViewer';
 import { appConfig } from '../../config';
 
 export default function HelpView() {
   const { state, updateHelpImages } = useApp();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [fullScreenImage, setFullScreenImage] = React.useState<string | null>(null);
-  const [isPickerOpen, setIsPickerOpen] = useState(false);
 
-  const handleImageUpload = () => {
-    setIsPickerOpen(true);
-  };
-
-  const handleSourceSelect = async (source: 'camera' | 'gallery' | 'file') => {
-    if (source === 'file') {
-      fileInputRef.current?.click();
-      return;
-    }
-
-    try {
-      const image = await Camera.getPhoto({
-        quality: 90,
-        allowEditing: false,
-        resultType: CameraResultType.Base64,
-        source: source === 'camera' ? CameraSource.Camera : CameraSource.Photos
-      });
-
-      if (image && image.base64String) {
-        const base64 = await compressImage(`data:image/${image.format};base64,${image.base64String}`);
-        updateHelpImages([...(state.helpImages || []), base64]);
-      }
-    } catch (error: any) {
-      if (error?.message === 'User cancelled photos app' || error?.message?.includes('cancelled')) {
-        return; // simply ignore when user cancels
-      }
-      console.error("Error picking image", error);
-    }
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = async (evt) => {
-        const base64 = await compressImage(evt.target?.result as string);
-        updateHelpImages([...(state.helpImages || []), base64]);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+  const { openPicker, picker } = useImagePicker(
+    (base64) => updateHelpImages([...(state.helpImages || []), base64]),
+    "Ajouter une image d'aide"
+  );
 
   const removeImage = (index: number) => {
     const updated = [...(state.helpImages || [])];
@@ -63,20 +23,7 @@ export default function HelpView() {
 
   return (
     <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300 pb-10">
-      <input 
-        type="file" 
-        ref={fileInputRef} 
-        onChange={handleFileChange} 
-        accept="image/*" 
-        className="hidden" 
-      />
-      
-      <SourcePicker 
-        isOpen={isPickerOpen}
-        onClose={() => setIsPickerOpen(false)}
-        onSelect={handleSourceSelect}
-        title="Ajouter une image d'aide"
-      />
+      {picker}
       <div className="flex items-center space-x-2 text-gray-800 dark:text-gray-100">
         <HelpCircle size={28} />
         <h2 className="text-2xl font-bold">Aide & Informations</h2>
@@ -240,7 +187,7 @@ export default function HelpView() {
             ))}
             
             <button 
-              onClick={handleImageUpload}
+              onClick={openPicker}
               className="border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 transition-colors aspect-square"
             >
               <Plus size={32} className="mb-2 opacity-50" />
@@ -251,15 +198,7 @@ export default function HelpView() {
       </Card>
 
       {fullScreenImage && (
-        <div className="fixed inset-0 bg-black/90 z-[100] flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setFullScreenImage(null)}>
-          <button 
-            className="absolute top-4 right-4 text-white bg-slate-900/40 hover:bg-slate-900/60 dark:bg-slate-800/20 dark:hover:bg-slate-800/40 p-2 rounded-full transition-colors"
-            onClick={() => setFullScreenImage(null)}
-          >
-            <X size={24} />
-          </button>
-          <img src={fullScreenImage} alt="Fullscreen" className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl" onClick={e => e.stopPropagation()} />
-        </div>
+        <ImageViewer src={fullScreenImage} onClose={() => setFullScreenImage(null)} />
       )}
 
     </div>

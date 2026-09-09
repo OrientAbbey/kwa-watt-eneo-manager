@@ -1,24 +1,29 @@
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { useApp } from '../../store/AppContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
-import { LogOut, Trash2, Edit3, Plus, User, Camera as CameraIcon, Hash, MapPin, Mail, X, Loader2 } from 'lucide-react';
+import { LogOut, Trash2, Edit3, Plus, User, Camera as CameraIcon, Hash, MapPin, Mail, Loader2 } from 'lucide-react';
 import { logOut, deleteAccount } from '../../lib/firebase';
 import { Dialog } from '@capacitor/dialog';
-import { Camera, CameraSource, CameraResultType } from '@capacitor/camera';
-import SourcePicker from '../ui/SourcePicker';
-import { compressImage } from '../../lib/utils';
+import { useImagePicker } from '../../hooks/useImagePicker';
+import ImageViewer from '../ui/ImageViewer';
 
 export default function ProfileView() {
   const { currentMeter, updateProfile, state, addMeter, deleteMeter, switchMeter, updateMeterName, showToast, currentUser, setCurrentUser, resetData } = useApp();
   const [localProfile, setLocalProfile] = useState(currentMeter.profile);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [targetPhoto, setTargetPhoto] = React.useState<'photoRecto' | 'photoVerso' | 'photoMeter' | 'photoProfile' | null>(null);
-  const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const [editingName, setEditingName] = useState(false);
   const [meterName, setMeterName] = useState(currentMeter.name);
+
+  const { openPicker, picker } = useImagePicker((base64) => {
+    if (!targetPhoto) return;
+    setLocalProfile(prev => ({ ...prev, [targetPhoto]: base64 }));
+    if (targetPhoto === 'photoProfile') {
+      updateProfile({ photoProfile: base64 });
+    }
+  });
 
   // Synchroniser le nom local avec le store si on change de compteur
   React.useEffect(() => {
@@ -43,53 +48,7 @@ export default function ProfileView() {
 
   const handlePhotoClick = (type: 'photoRecto' | 'photoVerso' | 'photoMeter' | 'photoProfile') => {
     setTargetPhoto(type);
-    setIsPickerOpen(true);
-  };
-
-  const handleSourceSelect = async (source: 'camera' | 'gallery' | 'file') => {
-    if (!targetPhoto) return;
-
-    if (source === 'file') {
-      fileInputRef.current?.click();
-      return;
-    }
-
-    try {
-      const image = await Camera.getPhoto({
-        quality: 90,
-        allowEditing: false,
-        resultType: CameraResultType.Base64,
-        source: source === 'camera' ? CameraSource.Camera : CameraSource.Photos
-      });
-
-      if (image && image.base64String) {
-        const base64 = await compressImage(`data:image/${image.format};base64,${image.base64String}`);
-        setLocalProfile(prev => ({ ...prev, [targetPhoto]: base64 }));
-        if (targetPhoto === 'photoProfile') {
-          updateProfile({ photoProfile: base64 });
-        }
-      }
-    } catch (error: any) {
-      if (error?.message === 'User cancelled photos app' || error?.message?.includes('cancelled')) {
-        return; // simply ignore when user cancels
-      }
-      console.error("Error picking image", error);
-    }
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file && targetPhoto) {
-      const reader = new FileReader();
-      reader.onload = async (evt) => {
-        const base64 = await compressImage(evt.target?.result as string);
-        setLocalProfile(prev => ({ ...prev, [targetPhoto]: base64 }));
-        if (targetPhoto === 'photoProfile') {
-          updateProfile({ photoProfile: base64 });
-        }
-      };
-      reader.readAsDataURL(file);
-    }
+    openPicker();
   };
 
   const removePhoto = async (type: 'photoRecto' | 'photoVerso' | 'photoMeter' | 'photoProfile') => {
@@ -167,19 +126,7 @@ export default function ProfileView() {
 
   return (
     <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300 text-slate-800 dark:text-slate-100">
-      <input 
-        type="file" 
-        ref={fileInputRef} 
-        onChange={handleFileChange} 
-        accept="image/*" 
-        className="hidden" 
-      />
-      
-      <SourcePicker 
-        isOpen={isPickerOpen}
-        onClose={() => setIsPickerOpen(false)}
-        onSelect={handleSourceSelect}
-      />
+      {picker}
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
         <div className="flex items-center space-x-4">
           <div className="relative group w-20 h-20">
@@ -205,7 +152,7 @@ export default function ProfileView() {
               </div>
             )}
             <button 
-              onClick={() => handlePhotoClick('photoProfile' as any)} 
+              onClick={() => handlePhotoClick('photoProfile')} 
               className="absolute bottom-0 right-0 bg-orange-500 text-white p-1.5 rounded-full shadow hover:bg-orange-600 transition-colors"
             >
               <CameraIcon size={14} />
@@ -462,15 +409,7 @@ export default function ProfileView() {
       </Card>
 
       {fullScreenImage && (
-        <div className="fixed inset-0 bg-black/90 z-[100] flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setFullScreenImage(null)}>
-          <button 
-            className="absolute top-4 right-4 text-white bg-slate-900/40 hover:bg-slate-900/60 dark:bg-slate-800/20 dark:hover:bg-slate-800/40 p-2 rounded-full transition-colors"
-            onClick={() => setFullScreenImage(null)}
-          >
-            <X size={24} />
-          </button>
-          <img src={fullScreenImage} alt="Fullscreen" className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl" onClick={e => e.stopPropagation()} />
-        </div>
+        <ImageViewer src={fullScreenImage} onClose={() => setFullScreenImage(null)} />
       )}
     </div>
   );

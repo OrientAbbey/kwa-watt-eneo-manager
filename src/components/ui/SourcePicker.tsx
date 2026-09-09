@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'motion/react';
 interface SourcePickerProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelect: (source: 'camera' | 'gallery' | 'file') => void;
+  onSelect: (source: 'camera' | 'gallery') => void;
   title?: string;
 }
 

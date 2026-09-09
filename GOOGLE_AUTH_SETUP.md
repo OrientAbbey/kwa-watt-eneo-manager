@@ -99,9 +99,11 @@ Consommé par `src/lib/firebase.ts` (`initializeApp` + `getFirestore`).
 | Auth Domain | `kwa-watt-eneo-manager.firebaseapp.com` |
 | Firestore | base `(default)` en **europe-west1** — règles déployées via `firebase deploy --only firestore:rules` |
 | Google Auth | ✅ activé (Identity Toolkit) |
+| Signature APK (debug) | keystore dédié commité `android/app/kwa-watt-debug.p12` (alias `androiddebugkey`, mot de passe `android`) |
+| SHA-1 signature | `AB:4B:46:38:3B:F8:09:2F:3A:62:36:4C:69:90:D8:4D:66:3B:CB:D5` — **à déclarer en console** (section 3.4) |
 | `google-services.json` | présent dans `android/app/` *(exclu de git)* |
 
-> Le **client secret** web OAuth est disponible dans la console Google Cloud (Identifiants). Il n'est pas utilisé côté app (le plugin renvoie uniquement l'ID Token) et **ne doit pas être commité**. Le SHA-1 debug reste à vérifier (section 3.4, point 3) pour un premier build APK local.
+> Le **client secret** web OAuth est disponible dans la console Google Cloud (Identifiants). Il n'est pas utilisé côté app (le plugin renvoie uniquement l'ID Token) et **ne doit pas être commité**.
 
 ### 3.1 Procédure
 
@@ -128,13 +130,13 @@ Consommé par `src/lib/firebase.ts` (`initializeApp` + `getFirestore`).
 
 1. **Réglages du projet (⚙️) → Paramètres du projet → Vos applications → Ajouter une application → Android**.
 2. **Nom du package Android** : `com.eneotool.app` (doit être identique à `appConfig.appId` et au `namespace`/`applicationId` de `android/app/build.gradle`).
-3. **Empreinte SHA-1** : indispensable pour Google Sign-In natif.
-   - Clé de debug (développement) :
+3. **Empreinte SHA-1** : indispensable pour Google Sign-In natif (le plugin en mode **Credential Manager** annule silencieusement si aucun client OAuth Android ne correspond au package + SHA-1).
+   - Depuis le 09/09/2026, le projet utilise un **keystore de signature stable commité** (`android/app/kwa-watt-debug.p12`), utilisé par **toutes** les builds debug (CI incluse) via `android/app/build.gradle` (`signingConfigs.debug`). Son SHA-1 est :
      ```
-     keytool -list -v -keystore %USERPROFILE%\.android\debug.keystore -alias androiddebugkey -storepass android -keypass android
+     AB:4B:46:38:3B:F8:09:2F:3A:62:36:4C:69:90:D8:4D:66:3B:CB:D5
      ```
-   - Clé de release : la même commande avec ton keystore de production.
-   - Pour une première mise en service, commence par le **SHA-1 debug** (l'APK debug est signé avec ce keystore).
+   - **Coller cette empreinte dans Firebase** : *Réglages du projet → Vos applications → `com.eneotool.app` → Ajouter une empreinte* → sauvegarder. Firebase crée alors le **client OAuth Android** correspondant dans Google Cloud (quelques minutes de propagation).
+   - ⚠️ Ne pas déclarer le SHA-1 de la clé debug *par défaut* d'Android Studio (`~/.android/debug.keystore`) : il diffère de celui ci-dessus (clé différente par machine) — seules les builds signées avec `kwa-watt-debug.p12` gèrent le sign-in Google.
 4. Télécharge **`google-services.json`**.
 5. **Dépose ce fichier dans `android/app/google-services.json`**.
    - ⚠️ Le fichier est **exclu de git** (`android/.gitignore`). Ne jamais le committer (clés privées du projet).
@@ -257,7 +259,17 @@ C'est la cause initiale du bug sur mobile. Combinaison de 4 problèmes historiqu
 | Plugin incompatible (`@codetrix-studio/…` bloqué en Capacitor 6) | erreur 10 / crash | déjà migré vers `@capgo/capacitor-social-login` (compatible Capacitor 8) |
 | `webClientId` incohérent avec le client du projet | erreur 10 | aligner `appConfig.google.webClientId` sur le Web Client ID du **même** projet Firebase |
 
-> Un APK re-signé avec une autre clé (ex. release au lieu de debug) change le SHA-1 → re-déclarer le nouveau SHA-1 dans Firebase.
+> Un APK re-signé avec une autre clé change le SHA-1 → re-déclarer le nouveau SHA-1 dans Firebase.
+
+### 8.6 Erreur « Google Sign-in cancelled by user »
+
+Ce message est renvoyé par le plugin pour une `GetCredentialCancellationException` (Credential Manager). Il n'est **pas toujours** une annulation réelle de l'utilisateur : dans **99 % des cas, l'écran Google ne s'ouvre même pas** et le flux s'auto-annule car **aucun client OAuth Android ne correspond au package + SHA-1** de l'APK installé.
+
+| Cause | Correction |
+|---|---|
+| SHA-1 de la signature non déclaré dans Firebase (client OAuth Android absent) | section 3.4 point 3 — déclarer `AB:4B:46:38:3B:F8:09:2F:3A:62:36:4C:69:90:D8:4D:66:3B:CB:D5` |
+| APK de la **CI** installé : la clé debug des runners GitHub est régénérée à chaque build | réinstaller un APK signé avec `kwa-watt-debug.p12` (artefact CI **après** le commit d'intégration de la clé) |
+| API key restreinte qui bloque `google-services` ou le trafic OAuth | vérifier les restrictions de clé API (section 4 point 4) |
 
 ### 8.2 Erreurs `12500` / `12501` (cancel / internal)
 
@@ -291,6 +303,7 @@ npx cap sync android
 - La session locale expire après `authMaxAgeMs` (30 jours par défaut, réglable dans `src/config.ts`).
 - Les photos capturées sont compressées avant sauvegarde (documents Firestore < 1 Mo).
 - 🔒 **Revue sécurité 09/09/2026** : pas de secret committé (le client secret OAuth web reste hors repo) ; suppression autorisée sur son propre doc Firestore (`allow delete`), `npm ci` en CI (lockfile figé). `npm audit` signale 7 vulns dans `@capacitor/assets` (sharp/tar/uuid — **dev-only**, jamais embarquées dans l'APK ni le bundle web) : risque **accepté**, à revoir à la prochaine montée de version de `@capacitor/assets`.
+- 🔑 **`kwa-watt-debug.p12` est volontairement commité** : clé **debug uniquement** (aucun accès aux stores ni données), nécessaire pour rendre le sign-in Google fonctionnel sur toutes les builds (CI et locales). Ne jamais la réutiliser comme clé de release.
 
 ---
 

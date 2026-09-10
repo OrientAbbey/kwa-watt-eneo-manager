@@ -1,4 +1,4 @@
-import React, { createElement, useState } from "react";
+import React, { createElement, useState, useEffect } from "react";
 import { useApp } from "../store/AppContext";
 import { Calculator, Home, History, User, Settings, HelpCircle, Plus, Loader2, CloudOff, Cloud, Moon, Sun } from "lucide-react";
 import DashboardView from "./views/DashboardView";
@@ -9,12 +9,45 @@ import SettingsView from "./views/SettingsView";
 import HelpView from "./views/HelpView";
 import LoginView from "./views/LoginView";
 import { cn } from "../lib/utils";
+import { Dialog } from '@capacitor/dialog';
+import { notificationsSupported, requestNotificationPermission } from "../lib/notifications";
 
 type TabValue = "dashboard" | "calculator" | "history" | "profile" | "settings" | "help";
 
+const NOTIF_ASKED_KEY = 'kwawatt_notif_asked';
+
 export default function MainLayout() {
   const [activeTab, setActiveTab] = useState<TabValue>("dashboard");
-  const { state, currentMeter, switchMeter, toastInfo, isLoading, currentUser, updateTheme } = useApp();
+  const { state, currentMeter, switchMeter, toastInfo, isLoading, currentUser, updateTheme, updateSettings, showToast } = useApp();
+
+  useEffect(() => {
+    if (!notificationsSupported() || localStorage.getItem(NOTIF_ASKED_KEY)) return;
+    if (state.settings.alerts?.enableNotifications) return;
+    if (typeof Notification !== 'undefined' && Notification.permission === 'denied') {
+      localStorage.setItem(NOTIF_ASKED_KEY, '1');
+      return;
+    }
+    const timer = setTimeout(async () => {
+      try {
+        const { value } = await Dialog.confirm({
+          title: 'Notifications',
+          message: "Activer les notifications pour ne pas manquer les alertes de consommation (début de mois, seuil atteint, hausse anormale) ?",
+        });
+        if (value) {
+          const granted = await requestNotificationPermission();
+          if (granted) {
+            updateSettings({ alerts: { ...state.settings.alerts, enableNotifications: true } });
+            showToast('Notifications activées');
+          }
+        }
+      } catch (e) {
+        console.error('Notification prompt failed', e);
+      } finally {
+        localStorage.setItem(NOTIF_ASKED_KEY, '1');
+      }
+    }, 600);
+    return () => clearTimeout(timer);
+  }, []);
 
   // If no user is logged in, show the login view
   if (!currentUser) {

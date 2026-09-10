@@ -21,7 +21,6 @@ interface EditableRow {
 }
 
 interface HistoryRowProps {
-  key?: React.Key;
   title: string;
   subtitle: string;
   onEdit: () => void;
@@ -274,36 +273,38 @@ export default function HistoryView() {
         {tab === 'consommations' ? (
           sortedConsos.length === 0 ? <div className="text-center text-gray-400 py-10 text-sm">Aucune donnée</div> :
           sortedConsos.map(c => (
-            <HistoryRow
-              key={c.id}
-              title={format(parseISO(c.date + '-01'), 'MMMM yyyy', { locale: fr })}
-              subtitle={`${c.kwh.toFixed(2)} kWh`}
-              onEdit={() => handleEdit(c)}
-              onDelete={async () => {
-                const { value } = await Dialog.confirm({ title: 'Confirmation', message: "Voulez-vous supprimer cette consommation ?" });
-                if (value) {
-                  deleteConsumption(c.id);
-                  showToast("Consommation supprimée");
-                }
-              }}
-            />
+            <div key={c.id}>
+              <HistoryRow
+                title={format(parseISO(c.date + '-01'), 'MMMM yyyy', { locale: fr })}
+                subtitle={`${c.kwh.toFixed(2)} kWh`}
+                onEdit={() => handleEdit(c)}
+                onDelete={async () => {
+                  const { value } = await Dialog.confirm({ title: 'Confirmation', message: "Voulez-vous supprimer cette consommation ?" });
+                  if (value) {
+                    deleteConsumption(c.id);
+                    showToast("Consommation supprimée");
+                  }
+                }}
+              />
+            </div>
           ))
         ) : (
           sortedRecharges.length === 0 ? <div className="text-center text-gray-400 py-10 text-sm">Aucune donnée</div> :
           sortedRecharges.map(r => (
-            <HistoryRow
-              key={r.id}
-              title={format(parseISO(r.date), 'dd MMM yyyy', { locale: fr })}
-              subtitle={`${r.montant.toLocaleString()} ${MONETARY_UNIT} • ${r.kwh.toFixed(1)} kWh`}
-              onEdit={() => handleEdit(r)}
-              onDelete={async () => {
-                const { value } = await Dialog.confirm({ title: 'Confirmation', message: "Voulez-vous supprimer cette recharge ?" });
-                if (value) {
-                  deleteRecharge(r.id);
-                  showToast("Recharge supprimée");
-                }
-              }}
-            />
+            <div key={r.id}>
+              <HistoryRow
+                title={format(parseISO(r.date), 'dd MMM yyyy', { locale: fr })}
+                subtitle={`${r.montant.toLocaleString()} ${MONETARY_UNIT} • ${r.kwh.toFixed(1)} kWh`}
+                onEdit={() => handleEdit(r)}
+                onDelete={async () => {
+                  const { value } = await Dialog.confirm({ title: 'Confirmation', message: "Voulez-vous supprimer cette recharge ?" });
+                  if (value) {
+                    deleteRecharge(r.id);
+                    showToast("Recharge supprimée");
+                  }
+                }}
+              />
+            </div>
           ))
         )}
       </div>

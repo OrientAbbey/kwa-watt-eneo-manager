@@ -1,4 +1,4 @@
-import React, { createElement, useState, useEffect } from "react";
+import React, { createElement, useState } from "react";
 import { useApp } from "../store/AppContext";
 import { Calculator, Home, History, User, Settings, HelpCircle, Plus, Loader2, CloudOff, Cloud, Moon, Sun } from "lucide-react";
 import DashboardView from "./views/DashboardView";
@@ -9,17 +9,12 @@ import SettingsView from "./views/SettingsView";
 import HelpView from "./views/HelpView";
 import LoginView from "./views/LoginView";
 import { cn } from "../lib/utils";
-import { requestAllPermissions } from "../lib/permissions";
 
 type TabValue = "dashboard" | "calculator" | "history" | "profile" | "settings" | "help";
 
 export default function MainLayout() {
   const [activeTab, setActiveTab] = useState<TabValue>("dashboard");
   const { state, currentMeter, switchMeter, toastInfo, isLoading, currentUser, updateTheme } = useApp();
-
-  useEffect(() => {
-    requestAllPermissions();
-  }, [currentUser]);
 
   // If no user is logged in, show the login view
   if (!currentUser) {

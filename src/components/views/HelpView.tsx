@@ -5,6 +5,7 @@ import { HelpCircle, Calculator, Zap, Database, Link as LinkIcon, Image as Image
 import { useImagePicker } from '../../hooks/useImagePicker';
 import ImageViewer from '../ui/ImageViewer';
 import { appConfig } from '../../config';
+import { MONETARY_UNIT } from '../../lib/utils';
 
 export default function HelpView() {
   const { state, updateHelpImages } = useApp();
@@ -70,7 +71,7 @@ export default function HelpView() {
         <CardContent className="text-sm text-gray-600 space-y-3">
           <ul className="list-disc pl-5 space-y-2">
             <li><strong>Dashboard Complet :</strong> Vue rapide sur le solde d'énergie estimé, consommation actuelle, prévision des jours restants avant coupure et graphiques.</li>
-            <li><strong>Historique (Consommations / Recharges) :</strong> Suivi précis de chaque mois de consommation et achats de crédits en FCFA, avec export CSV/JSON et import.</li>
+            <li><strong>Historique (Consommations / Recharges) :</strong> Suivi précis de chaque mois de consommation et achats de crédits en {MONETARY_UNIT}, avec export CSV/JSON et import.</li>
             <li><strong>Calculatrice Intégrée :</strong> Estimations bidirectionnelles "Montant vers kWh" et "kWh vers Montant", avec ajustements rapides des valeurs.</li>
             <li><strong>Profil Utilisateur Complet :</strong> Enregistrement du numéro de compteur, photos de l'écran, photo recto-verso de la carte d'accès.</li>
             <li><strong>Synchronisation Cloud :</strong> Connectez-vous avec Google pour sauvegarder automatiquement toutes vos données et vos photos dans le cloud de manière sécurisée.</li>
@@ -121,7 +122,7 @@ export default function HelpView() {
               <li><strong>id :</strong> identifiant unique (laissez vide pour générer automatiquement).</li>
               <li><strong>date :</strong> Format AAAA-MM (ex: 2024-06) pour conso, AAAA-MM-JJ (ex: 2024-06-15) pour recharge.</li>
               <li><strong>kwh :</strong> quantité d'énergie (nombre décimal avec point).</li>
-              <li><strong>montant :</strong> montant en FCFA (uniquement pour les recharges).</li>
+              <li><strong>montant :</strong> montant en {MONETARY_UNIT} (uniquement pour les recharges).</li>
             </ul>
           </div>
           <div className="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-lg border border-slate-200 dark:border-slate-600 mt-2">

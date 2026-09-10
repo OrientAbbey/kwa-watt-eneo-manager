@@ -1,3 +1,5 @@
+import { MONETARY_UNIT } from './utils';
+
 export const TVA_RATE = 0.1925; // 19.25%
 
 export interface TariffRange {
@@ -88,8 +90,8 @@ export function calculatePrice(
     runningCumul += partInBase;
     
     lines.push(
-      `${partInBase.toFixed(2)} kWh X ${unitPriceBase.toFixed(2)} FCFA/kWh = ${costBase.toFixed(2)} FCFA ` +
-      `(tarif de base ${tranche.base} FCFA${unitPriceBase > tranche.base ? ' + TVA' : ''})`
+      `${partInBase.toFixed(2)} kWh X ${unitPriceBase.toFixed(2)} ${MONETARY_UNIT}/kWh = ${costBase.toFixed(2)} ${MONETARY_UNIT} ` +
+      `(tarif de base ${tranche.base} ${MONETARY_UNIT}${unitPriceBase > tranche.base ? ' + TVA' : ''})`
     );
   }
   
@@ -100,13 +102,13 @@ export function calculatePrice(
     totalPrice += costComfort;
     
     lines.push(
-      `${partInComfort.toFixed(2)} kWh X ${unitPriceComfort.toFixed(2)} FCFA/kWh = ${costComfort.toFixed(2)} FCFA ` +
-      `(tarif de confort ${tranche.comfort} FCFA${unitPriceComfort > tranche.comfort ? ' + TVA' : ''})`
+      `${partInComfort.toFixed(2)} kWh X ${unitPriceComfort.toFixed(2)} ${MONETARY_UNIT}/kWh = ${costComfort.toFixed(2)} ${MONETARY_UNIT} ` +
+      `(tarif de confort ${tranche.comfort} ${MONETARY_UNIT}${unitPriceComfort > tranche.comfort ? ' + TVA' : ''})`
     );
   }
   
   const finalPrice = Math.ceil(totalPrice);
-  lines.push(`Total à payer : ${finalPrice} FCFA`);
+  lines.push(`Total à payer : ${finalPrice} ${MONETARY_UNIT}`);
   
   return { value: finalPrice, descriptionLines: lines };
 }
@@ -122,7 +124,7 @@ export function calculateKwh(
   const tranche = getTariffRange(average6Months, clientType, tariffs);
   
   const lines: string[] = [
-    `Pour un paiement de ${amountFcfa.toFixed(0)} FCFA :`,
+    `Pour un paiement de ${amountFcfa.toFixed(0)} ${MONETARY_UNIT} :`,
     `- Tranche actuelle : ${tranche.min}-${tranche.max === Infinity ? '+' : tranche.max} kWh`,
     `- Consommation cumulée du mois en cours : ${cumulConsom.toFixed(2)} kWh`,
   ];
@@ -140,8 +142,8 @@ export function calculateKwh(
     const costBase = kwhFromBase * unitPriceBase;
     
     lines.push(
-      `${remainingPrice.toFixed(2)} FCFA ÷ ${unitPriceBase.toFixed(2)} FCFA/kWh = ${kwhFromBase.toFixed(2)} kWh ` +
-      `(tarif de base ${tranche.base} FCFA${unitPriceBase > tranche.base ? ' + TVA)' : ')'}`
+      `${remainingPrice.toFixed(2)} ${MONETARY_UNIT} ÷ ${unitPriceBase.toFixed(2)} ${MONETARY_UNIT}/kWh = ${kwhFromBase.toFixed(2)} kWh ` +
+      `(tarif de base ${tranche.base} ${MONETARY_UNIT}${unitPriceBase > tranche.base ? ' + TVA)' : ')'}`
     );
     
     remainingPrice -= costBase;
@@ -156,8 +158,8 @@ export function calculateKwh(
     totalKwh += kwhFromComfort;
     
     lines.push(
-      `${remainingPrice.toFixed(2)} FCFA ÷ ${unitPriceComfort.toFixed(2)} FCFA/kWh = ${kwhFromComfort.toFixed(2)} kWh ` +
-      `(tarif de confort ${tranche.comfort} FCFA${unitPriceComfort > tranche.comfort ? ' + TVA)' : ')'}`
+      `${remainingPrice.toFixed(2)} ${MONETARY_UNIT} ÷ ${unitPriceComfort.toFixed(2)} ${MONETARY_UNIT}/kWh = ${kwhFromComfort.toFixed(2)} kWh ` +
+      `(tarif de confort ${tranche.comfort} ${MONETARY_UNIT}${unitPriceComfort > tranche.comfort ? ' + TVA)' : ')'}`
     );
   }
   

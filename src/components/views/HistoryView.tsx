@@ -9,7 +9,7 @@ import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 import { Capacitor } from '@capacitor/core';
 import { Dialog } from '@capacitor/dialog';
-import { sortByDate } from '../../lib/utils';
+import { sortByDate, MONETARY_UNIT } from '../../lib/utils';
 import { Consumption, Recharge } from '../../types';
 
 interface EditableRow {
@@ -301,7 +301,7 @@ export default function HistoryView() {
               ) : (
                 <div className="flex space-x-3">
                   <div className="flex-1">
-                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Montant (FCFA)</label>
+                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Montant ({MONETARY_UNIT})</label>
                     <input type="number" value={val1} onChange={e => setVal1(e.target.value)} className="w-full text-sm p-3 border border-slate-200 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100" placeholder="ex: 23000" />
                   </div>
                   <div className="flex-1">
@@ -343,7 +343,7 @@ export default function HistoryView() {
             <HistoryRow
               key={r.id}
               title={format(parseISO(r.date), 'dd MMM yyyy', { locale: fr })}
-              subtitle={`${r.montant.toLocaleString()} FCFA • ${r.kwh.toFixed(1)} kWh`}
+              subtitle={`${r.montant.toLocaleString()} ${MONETARY_UNIT} • ${r.kwh.toFixed(1)} kWh`}
               onEdit={() => handleEdit(r)}
               onDelete={async () => {
                 const { value } = await Dialog.confirm({ title: 'Confirmation', message: "Voulez-vous supprimer cette recharge ?" });

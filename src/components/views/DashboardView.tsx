@@ -5,7 +5,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Line, Cartes
 import * as df from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { AlertCircle, AlertTriangle, Info } from 'lucide-react';
-import { sortByDate } from '../../lib/utils';
+import { sortByDate, MONETARY_UNIT } from '../../lib/utils';
 import { getAlerts } from '../../lib/alerts';
 import { notifyAlerts } from '../../lib/notifications';
 import { Consumption, Recharge } from '../../types';
@@ -269,7 +269,7 @@ export default function DashboardView() {
             <div className="w-px bg-slate-100"></div>
             <div className="text-center">
               <p className="text-[10px] text-slate-400 uppercase font-bold">Coût Estimé Mens.</p>
-              <p className="text-sm font-bold text-slate-700 dark:text-slate-200">{projectedCost.toLocaleString()} FCFA</p>
+              <p className="text-sm font-bold text-slate-700 dark:text-slate-200">{projectedCost.toLocaleString()} {MONETARY_UNIT}</p>
             </div>
           </div>
         </div>
@@ -286,7 +286,7 @@ export default function DashboardView() {
                   <label className="text-[10px] text-slate-400 font-bold uppercase mb-1 block">Facture Estimée (Moyenne)</label>
                   <div className="relative">
                     <input type="text" value={projectedCost.toLocaleString()} readOnly className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 font-bold text-slate-700 dark:text-slate-200 focus:outline-none" />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-slate-400 text-xs">FCFA</span>
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-slate-400 text-xs">{MONETARY_UNIT}</span>
                   </div>
                 </div>
                <p className="text-[10px] text-slate-400 leading-relaxed italic mt-2">
@@ -303,7 +303,7 @@ export default function DashboardView() {
              {lastRecharge ? (
                <div className="flex justify-between items-center">
                  <div>
-                   <p className="text-2xl font-bold">{lastRecharge.montant.toLocaleString()} <span className="text-xs opacity-70">FCFA</span></p>
+                   <p className="text-2xl font-bold">{lastRecharge.montant.toLocaleString()} <span className="text-xs opacity-70">{MONETARY_UNIT}</span></p>
                    <p className="text-xs text-indigo-200 capitalize">{format(parseISO(lastRecharge.date), 'dd MMM yyyy', { locale: fr })}</p>
                  </div>
                  <div className="text-right">
@@ -363,7 +363,7 @@ export default function DashboardView() {
                   <Bar hide={hiddenSeries['rechargeKwh']} yAxisId="left" dataKey="rechargeKwh" name="Recharge (kWh)" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={30} />
                   <Bar hide={hiddenSeries['kwh']} yAxisId="left" dataKey="kwh" name="Consommation (kWh)" fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={30} />
                   
-                  <Line hide={hiddenSeries['cost']} yAxisId="right" type="monotone" dataKey="cost" name="Coût (FCFA)" stroke="#f97316" strokeWidth={3} dot={{r: 4}} />
+                  <Line hide={hiddenSeries['cost']} yAxisId="right" type="monotone" dataKey="cost" name={`Coût (${MONETARY_UNIT})`} stroke="#f97316" strokeWidth={3} dot={{r: 4}} />
                 </ComposedChart>
               </ResponsiveContainer>
             )}

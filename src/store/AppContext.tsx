@@ -128,7 +128,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    const flush = () => window.localStorage.setItem(STORAGE_KEY, JSON.stringify(stateRef.current));
+    const timer = setTimeout(flush, appConfig.storage.localDebounceMs);
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') flush();
+    };
+    window.addEventListener('pagehide', flush);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('pagehide', flush);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [state]);
+
+  useEffect(() => {
     if (currentUser?.type === 'google' && hasLoadedFromCloud) {
        const timer = setTimeout(() => {
           saveUserDataToBackend(stateRef.current).catch(console.error);

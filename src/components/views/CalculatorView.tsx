@@ -3,7 +3,7 @@ import { useApp } from '../../store/AppContext';
 import { calculateKwh, calculatePrice, calculateAverageConsumption } from '../../lib/eneo';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { ArrowDownUp, Info } from 'lucide-react';
-import { cn, sortByDate } from '../../lib/utils';
+import { cn, sortByDate, MONETARY_UNIT } from '../../lib/utils';
 import { Consumption } from '../../types';
 
 type Mode = 'PRICE_TO_KWH' | 'KWH_TO_PRICE';
@@ -63,13 +63,13 @@ export default function CalculatorView() {
               onClick={() => setMode('KWH_TO_PRICE')}
               className={cn("flex-1 py-2 text-sm font-medium rounded-lg transition-all", mode === 'KWH_TO_PRICE' ? 'bg-white dark:bg-slate-800 shadow-sm text-indigo-700 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-800/50')}
             >
-              kWh → FCFA
+              kWh → {MONETARY_UNIT}
             </button>
             <button 
               onClick={() => setMode('PRICE_TO_KWH')}
               className={cn("flex-1 py-2 text-sm font-medium rounded-lg transition-all", mode === 'PRICE_TO_KWH' ? 'bg-white dark:bg-slate-800 shadow-sm text-indigo-700 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-800/50')}
             >
-              FCFA → kWh
+              {MONETARY_UNIT} → kWh
             </button>
           </div>
         </CardContent>
@@ -80,7 +80,7 @@ export default function CalculatorView() {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                {mode === 'KWH_TO_PRICE' ? 'Consommation estimée (kWh)' : 'Montant à payer (FCFA)'}
+                {mode === 'KWH_TO_PRICE' ? 'Consommation estimée (kWh)' : `Montant à payer (${MONETARY_UNIT})`}
               </label>
               <div className="relative">
                 <input 
@@ -91,7 +91,7 @@ export default function CalculatorView() {
                   className="w-full text-xl p-3 border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all font-mono"
                 />
                 <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-gray-400 font-medium font-mono">
-                  {mode === 'KWH_TO_PRICE' ? 'kWh' : 'FCFA'}
+                  {mode === 'KWH_TO_PRICE' ? 'kWh' : MONETARY_UNIT}
                 </div>
               </div>
             </div>
@@ -180,7 +180,7 @@ export default function CalculatorView() {
           <CardContent className="p-6 pt-0">
             <div className="text-4xl font-bold mb-4 font-mono">
               {mode === 'KWH_TO_PRICE' ? (
-                <>{result.value.toLocaleString()} <span className="text-xl font-normal text-indigo-200">FCFA</span></>
+                <>{result.value.toLocaleString()} <span className="text-xl font-normal text-indigo-200">{MONETARY_UNIT}</span></>
               ) : (
                 <>{result.value} <span className="text-xl font-normal text-indigo-200">kWh</span></>
               )}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../../store/AppContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { LogOut, Trash2, Edit3, Plus, User, Camera as CameraIcon, Hash, MapPin, Mail, Loader2 } from 'lucide-react';
@@ -7,10 +7,12 @@ import { Dialog } from '@capacitor/dialog';
 import { useImagePicker } from '../../hooks/useImagePicker';
 import ImageViewer from '../ui/ImageViewer';
 
+const fieldClass = "flex-1 min-w-[120px] p-2 border border-gray-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-800";
+
 export default function ProfileView() {
   const { currentMeter, updateProfile, state, addMeter, deleteMeter, switchMeter, updateMeterName, showToast, currentUser, setCurrentUser, resetData } = useApp();
   const [localProfile, setLocalProfile] = useState(currentMeter.profile);
-  const [targetPhoto, setTargetPhoto] = React.useState<'photoRecto' | 'photoVerso' | 'photoMeter' | 'photoProfile' | null>(null);
+  const [targetPhoto, setTargetPhoto] = useState<'photoRecto' | 'photoVerso' | 'photoMeter' | 'photoProfile' | null>(null);
   const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -26,7 +28,7 @@ export default function ProfileView() {
   });
 
   // Synchroniser le nom local avec le store si on change de compteur
-  React.useEffect(() => {
+  useEffect(() => {
     setMeterName(currentMeter.name);
     setLocalProfile(currentMeter.profile);
   }, [currentMeter.id, currentMeter.name, currentMeter.profile]);
@@ -203,7 +205,7 @@ export default function ProfileView() {
                       type="text" 
                       value={meterName} 
                       onChange={e => setMeterName(e.target.value)}
-                      className="flex-1 min-w-[120px] p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-800"
+                      className={fieldClass}
                     />
                     <button onClick={handleUpdateMeterName} className="bg-indigo-600 text-white px-3 py-2 rounded-lg font-medium text-sm shrink-0">OK</button>
                     <button onClick={() => { setEditingName(false); setMeterName(currentMeter.name); }} className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 px-3 py-2 rounded-lg font-medium text-sm shrink-0 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">Annuler</button>
@@ -213,7 +215,7 @@ export default function ProfileView() {
                     <select 
                       value={state.activeMeterId} 
                       onChange={e => switchMeter(e.target.value)}
-                      className="flex-1 p-2 border border-gray-300 dark:border-slate-700 rounded-lg bg-gray-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500"
+                      className={fieldClass}
                     >
                       {state.meters.map(m => (
                         <option key={m.id} value={m.id}>{m.name}</option>

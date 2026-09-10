@@ -31,6 +31,7 @@ export const appConfig = {
     authKey: 'eneo_app_auth',
     authMaxAgeMs: 30 * 24 * 60 * 60 * 1000,
     syncDebounceMs: 5000,
+    localDebounceMs: 400,
   },
 
   assets: {

@@ -3,6 +3,7 @@ import { useApp } from '../../store/AppContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { Settings as SettingsIcon, Save, RefreshCcw, Bell } from 'lucide-react';
 import { DEFAULT_SETTINGS, DEFAULT_ALERTS } from '../../constants';
+import { MONETARY_UNIT } from '../../lib/utils';
 import { Dialog } from '@capacitor/dialog';
 import { notificationsSupported, requestNotificationPermission } from '../../lib/notifications';
 
@@ -171,8 +172,8 @@ export default function SettingsView() {
                   <tr className="border-b text-slate-500 dark:text-slate-400">
                     <th className="pb-2">Min</th>
                     <th className="pb-2">Max</th>
-                    <th className="pb-2">Base (FCFA)</th>
-                    <th className="pb-2">Confort (FCFA)</th>
+                    <th className="pb-2">Base ({MONETARY_UNIT})</th>
+                    <th className="pb-2">Confort ({MONETARY_UNIT})</th>
                     <th className="pb-2"></th>
                   </tr>
                 </thead>

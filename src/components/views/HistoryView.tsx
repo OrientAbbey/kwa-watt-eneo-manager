@@ -10,6 +10,7 @@ import { Share } from '@capacitor/share';
 import { Capacitor } from '@capacitor/core';
 import { Dialog } from '@capacitor/dialog';
 import { sortByDate, MONETARY_UNIT } from '../../lib/utils';
+import { serializeExport, parseExport } from '../../lib/io';
 import { Consumption, Recharge } from '../../types';
 
 interface EditableRow {
@@ -107,28 +108,11 @@ export default function HistoryView() {
     try {
       const isCsv = state.settings.exportFormat === 'csv';
       const filename = `eneo_data_${format(new Date(), 'yyyyMMdd')}`;
-      let output = '';
-      let mimeType = '';
-
-      if (isCsv) {
-        mimeType = 'text/csv';
-        const lines = ['type,id,date,kwh,montant'];
-        currentMeter.consumptions.forEach(c => {
-          lines.push(`consommation,${c.id},${c.date},${c.kwh},`);
-        });
-        currentMeter.recharges.forEach(r => {
-          lines.push(`recharge,${r.id},${r.date},${r.kwh},${r.montant}`);
-        });
-        output = lines.join('\n');
-      } else {
-        mimeType = 'application/json';
-        const data = {
-          consumptions: currentMeter.consumptions,
-          recharges: currentMeter.recharges
-        };
-        output = JSON.stringify(data, null, 2);
-      }
-      
+      const output = serializeExport(
+        { consumptions: currentMeter.consumptions, recharges: currentMeter.recharges },
+        state.settings.exportFormat
+      );
+      const mimeType = isCsv ? 'text/csv' : 'application/json';
       const fileNameWithExt = `${filename}.${isCsv ? 'csv' : 'json'}`;
       
       // Try using Capacitor native share first
@@ -180,50 +164,17 @@ export default function HistoryView() {
       setTimeout(() => {
         try {
           const text = evt.target?.result as string;
-          if (text.trim().startsWith('{')) {
-            // JSON
-            const data = JSON.parse(text);
-            if (data.consumptions || data.recharges) {
-              importData(data.consumptions || [], data.recharges || []);
-              showToast("Importation JSON réussie");
-            } else {
-              showToast("Format JSON non reconnu");
-            }
+          const parsed = parseExport(text);
+          if (parsed) {
+            importData(parsed.consumptions, parsed.recharges);
+            showToast("Importation réussie");
           } else {
-            // CSV
-            const lines = text.split('\n').map(l => l.trim()).filter(l => l);
-            const consos: any[] = [];
-            const recharges: any[] = [];
-            
-            for (let i = 1; i < lines.length; i++) {
-              const cols = lines[i].split(',');
-              if (cols.length >= 4) {
-                const type = cols[0];
-                const id = cols[1] || uuidv4();
-                const dateStr = cols[2];
-                const kwh = parseFloat(cols[3]);
-                
-                if (type === 'consommation' && dateStr && !isNaN(kwh)) {
-                  consos.push({ id, date: dateStr, kwh });
-                } else if (type === 'recharge' && dateStr && !isNaN(kwh)) {
-                  const montant = parseFloat(cols[4] || '0');
-                  recharges.push({ id, date: dateStr, kwh, montant });
-                }
-              }
-            }
-            
-            if (consos.length > 0 || recharges.length > 0) {
-              importData(consos, recharges);
-              showToast("Importation CSV réussie");
-            } else {
-               showToast("Aucune donnée valide trouvée dans le CSV");
-            }
+            showToast("Format non reconnu ou aucune donnée valide");
           }
         } catch (err) {
           showToast("Erreur de parsing du fichier");
         } finally {
           setLoading(false);
-          // clear input
           if (fileInputRef.current) fileInputRef.current.value = '';
         }
       }, 500);

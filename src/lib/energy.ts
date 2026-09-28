@@ -53,3 +53,40 @@ export function estimateDaysLeft(balanceKwh: number, average6Months: number): nu
 
 export const sumRecharges = (recharges: Recharge[]) => recharges.reduce((acc, r) => acc + r.kwh, 0);
 export const sumConsumptions = (cons: Consumption[]) => cons.reduce((acc, c) => acc + c.kwh, 0);
+
+export interface EnergyStatus {
+  average6Months: number;
+  rechargeKwhThisMonth: number;
+  consumedThisMonth: number;
+  outstandingEmergency: number;
+  /** null tant qu'il n'y a pas assez de données (aucune recharge ce mois-ci). */
+  balanceKwh: number | null;
+  daysLeft: number | null;
+}
+
+interface MeterLike {
+  consumptions: Consumption[];
+  recharges: Recharge[];
+  emergencyCredits?: EmergencyCredit[];
+}
+
+/** Calcul unique partagé par le tableau de bord et le planificateur de rappels (mêmes chiffres partout). */
+export function computeEnergyStatus(meter: MeterLike, now: Date = new Date()): EnergyStatus {
+  const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const sorted = [...meter.consumptions].sort((a, b) => a.date.localeCompare(b.date));
+  const last6 = sorted.slice(-6);
+  const average6Months = last6.length === 0 ? 0 : last6.reduce((a, c) => a + c.kwh, 0) / last6.length;
+  const consumedThisMonth = sorted.find((c) => c.date === month)?.kwh ?? 0;
+  const rechargeKwhThisMonth = sumRecharges(meter.recharges.filter((r) => r.date.startsWith(month)));
+  const outstandingEmergency = outstandingEmergencyKwh(meter.emergencyCredits);
+  const hasData = average6Months > 0 && (rechargeKwhThisMonth > 0 || outstandingEmergency > 0);
+  const balanceKwh = hasData ? currentBalanceKwh(rechargeKwhThisMonth, consumedThisMonth, outstandingEmergency) : null;
+  return {
+    average6Months,
+    rechargeKwhThisMonth,
+    consumedThisMonth,
+    outstandingEmergency,
+    balanceKwh,
+    daysLeft: balanceKwh === null ? null : estimateDaysLeft(balanceKwh, average6Months),
+  };
+}

@@ -72,7 +72,7 @@ export const DEFAULT_REMOTE_CONFIG: RemoteConfig = {
     { id: "guide-pdf", label: "Guide d'utilisation du compteur (PDF)", url: "https://eneocameroon.cm/images/GUCPP_FR_12012023_x_DISI_x_SDCOM_x_2023.pdf", description: "Mode d'emploi complet de l'interface CIU", category: "officiel" },
     { id: "faq-pdf", label: "FAQ solution prépayée (PDF)", url: "https://www.eneocameroon.cm/images/FAQs_Solution_Prpaye_dEneo_Fr_0821.pdf", description: "Réponses aux questions fréquentes", category: "assistance" },
     { id: "tid", label: "Mise à jour TID du compteur", url: "https://eneocameroon.cm/index.php/fr/mise-a-jour-tid-des-compteurs-prepaye-faqs", description: "Procédure officielle et FAQ (STS édition 1 → 2)", category: "assistance" },
-    { id: "myenoe", label: "Portail MyEasyLight (factures, paiement)", url: "https://my.eneocameroon.cm/", description: "Agence en ligne", category: "paiement" },
+    { id: "myeasylight", label: "Portail MyEasyLight (factures, paiement)", url: "https://my.eneocameroon.cm/", description: "Agence en ligne", category: "paiement" },
     { id: "arsel", label: "ARSEL — régulateur de l'électricité", url: "https://arsel-cm.org", description: "Tarifs réglementés, droits des consommateurs", category: "officiel" },
     { id: "x", label: "Communiqués et coupures programmées (X)", url: "https://x.com/InsideEneo", description: "Annonces de travaux et coupures par quartier", category: "actualites" },
   ],

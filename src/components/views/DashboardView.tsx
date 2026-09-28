@@ -4,10 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Line, CartesianGrid, Legend, ComposedChart } from 'recharts';
 import * as df from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { AlertCircle, AlertTriangle, Info } from 'lucide-react';
+import { AlertCircle, AlertTriangle, Info, Smartphone, LifeBuoy, ClipboardPaste } from 'lucide-react';
 import { sortByDate, MONETARY_UNIT } from '../../lib/utils';
 import { getAlerts } from '../../lib/alerts';
-import { notifyAlerts } from '../../lib/notifications';
+import { lastMonths } from '../../lib/chartData';
+import { computeEnergyStatus } from '../../lib/energy';
+import { useNav } from '../../store/NavContext';
 import { Consumption, Recharge } from '../../types';
 
 const { format, subMonths, parseISO, addDays } = df;
@@ -16,6 +18,7 @@ import { calculatePrice } from '../../lib/eneo';
 
 export default function DashboardView() {
   const { state, currentMeter } = useApp();
+  const { navigate } = useNav();
   const [hiddenSeries, setHiddenSeries] = useState<Record<string, boolean>>({});
   const [mounted, setMounted] = useState(false);
 
@@ -34,27 +37,17 @@ export default function DashboardView() {
   const lastMonthDate = format(subMonths(new Date(), 1), 'yyyy-MM');
   const lastMonthConso = sortedConsumptions.find(c => c.date === lastMonthDate)?.kwh || 0;
 
-  const currentMonthRecharges = currentMeter.recharges.filter(r => r.date.startsWith(currentMonth));
-  const totalRechargeKwh = currentMonthRecharges.reduce((acc, r) => acc + r.kwh, 0);
-
-  const average6Months = useMemo(() => {
-    if (sortedConsumptions.length === 0) return 0;
-    const last6 = sortedConsumptions.slice(-6);
-    return last6.reduce((acc, c) => acc + c.kwh, 0) / last6.length;
-  }, [sortedConsumptions]);
+  // Chiffres partagés avec le planificateur de rappels (mêmes valeurs partout)
+  const energy = useMemo(() => computeEnergyStatus(currentMeter), [currentMeter]);
+  const { average6Months, rechargeKwhThisMonth: totalRechargeKwh, outstandingEmergency } = energy;
+  const balanceKwh = energy.balanceKwh ?? Math.max(0, totalRechargeKwh - currentConso);
 
   const projectedCost = useMemo(() => {
     if (average6Months === 0) return 0;
     return calculatePrice(average6Months, 0, average6Months, state.settings.clientType, state.settings.tva / 100, state.settings.tariffs).value;
   }, [average6Months, state.settings.clientType, state.settings.tva, state.settings.tariffs]);
 
-  const estimatedDaysLeft = useMemo(() => {
-    if (average6Months === 0 || totalRechargeKwh === 0) return null;
-    const dailyConso = average6Months / 30; // approx
-    const balance = totalRechargeKwh - currentConso;
-    if (balance <= 0) return 0;
-    return Math.floor(balance / dailyConso);
-  }, [average6Months, totalRechargeKwh, currentConso]);
+  const estimatedDaysLeft = energy.daysLeft;
 
   const sortedRecharges = sortByDate<Recharge>(currentMeter.recharges, 'desc');
   const lastRecharge = sortedRecharges.length > 0 ? sortedRecharges[0] : null;
@@ -62,9 +55,9 @@ export default function DashboardView() {
   // Yearly Comparison Data (Last 12 months)
   const yearlyData = useMemo(() => {
     const data = [];
-    for (let i = 11; i >= 0; i--) {
-      const d = subMonths(new Date(), i);
-      const monthStr = format(d, 'yyyy-MM');
+    for (const slot of lastMonths(12)) {
+      const d = new Date(slot.year, slot.month, 1);
+      const monthStr = slot.key;
       const c = currentMeter.consumptions.find(x => x.date === monthStr);
       const r = currentMeter.recharges.filter(x => x.date.startsWith(monthStr));
       
@@ -74,7 +67,7 @@ export default function DashboardView() {
       const calculatedCost = calculatePrice(kwh, 0, average6Months, state.settings.clientType, state.settings.tva / 100, state.settings.tariffs).value;
 
       data.push({
-        name: format(d, i % 3 === 0 ? 'MMM yyyy' : 'MMM', { locale: fr }),
+        name: format(d, slot.showYear ? 'MMM yyyy' : 'MMM', { locale: fr }),
         month: format(d, 'MMMM yyyy', { locale: fr }),
         fullDate: monthStr,
         kwh: kwh,
@@ -85,14 +78,16 @@ export default function DashboardView() {
     return data;
   }, [currentMeter.consumptions, currentMeter.recharges, average6Months, state.settings]);
 
+  // Six derniers mois CALENDAIRES (un mois sans relevé reste vide au lieu de décaler les autres)
+  const sixMonthData = useMemo(() => lastMonths(6).map(slot => ({
+    date: slot.key,
+    showYear: slot.showYear,
+    kwh: currentMeter.consumptions.find(c => c.date === slot.key)?.kwh ?? null,
+  })), [currentMeter.consumptions]);
+  const hasSixMonthData = sixMonthData.some(m => m.kwh !== null);
+
   // Alerts logic (pure, shared with notifications)
   const alerts = useMemo(() => getAlerts(state, currentMeter), [state, currentMeter]);
-
-  useEffect(() => {
-    if (state.settings.alerts?.enableNotifications) {
-      notifyAlerts(alerts).catch((e) => console.error('Notifications failed', e));
-    }
-  }, [alerts, state.settings.alerts?.enableNotifications]);
 
   const consumptionStatus = useMemo(() => {
     if (currentConso === 0) return null;
@@ -150,12 +145,17 @@ export default function DashboardView() {
           <div className="absolute top-0 right-0 p-4 opacity-10 text-4xl">🔋</div>
           <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mb-1">Énergie Restante (Est.)</p>
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-bold text-slate-900 dark:text-slate-50">{Math.max(0, totalRechargeKwh - currentConso).toFixed(1)}</span>
+            <span className="text-3xl font-bold text-slate-900 dark:text-slate-50">{Math.max(0, balanceKwh).toFixed(1)}</span>
             <span className="text-slate-400 font-bold uppercase text-xs">kWh</span>
           </div>
           <div className="mt-3 w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-            <div className="bg-green-500 h-full transition-all" style={{ width: `${Math.min(100, (Math.max(0, totalRechargeKwh - currentConso) / Math.max(1, totalRechargeKwh)) * 100)}%` }}></div>
+            <div className="bg-green-500 h-full transition-all" style={{ width: `${Math.min(100, (Math.max(0, balanceKwh) / Math.max(1, totalRechargeKwh + outstandingEmergency)) * 100)}%` }}></div>
           </div>
+          {outstandingEmergency > 0 && (
+            <p className="text-[11px] text-orange-600 dark:text-orange-400 font-semibold mt-2">
+              ⚠ {outstandingEmergency} kWh de crédit d'urgence à rembourser
+            </p>
+          )}
         </div>
 
         <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col justify-between">
@@ -191,6 +191,21 @@ export default function DashboardView() {
         </div>
       </div>
 
+      {/* Raccourcis */}
+      <div className="grid grid-cols-3 gap-3">
+        {[
+          { id: 'quick-recharge', label: 'Recharger', icon: <Smartphone size={18} />, cls: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300' },
+          { id: 'emergency-credit', label: 'Crédit 811', icon: <LifeBuoy size={18} />, cls: 'bg-orange-50 text-orange-700 dark:bg-orange-900/20 dark:text-orange-300' },
+        ].map(a => (
+          <button key={a.id} onClick={() => navigate('services', { type: 'focus', section: a.id })} className={`flex flex-col items-center gap-1 py-3 rounded-2xl text-xs font-semibold transition-colors hover:opacity-90 ${a.cls}`}>
+            {a.icon}{a.label}
+          </button>
+        ))}
+        <button onClick={() => navigate('history', { type: 'paste-sms' })} className="flex flex-col items-center gap-1 py-3 rounded-2xl text-xs font-semibold transition-colors hover:opacity-90 bg-indigo-50 text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-300">
+          <ClipboardPaste size={18} />Depuis un SMS
+        </button>
+      </div>
+
       {/* Main Visualizations Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-start">
         {/* Consumption History Chart */}
@@ -199,9 +214,9 @@ export default function DashboardView() {
             <h3 className="font-bold text-slate-800 dark:text-slate-100">Évolution de la consommation</h3>
           </div>
           <div className="w-full h-[300px] relative mt-2">
-             {mounted && sortedConsumptions.length > 0 ? (
+             {mounted && hasSixMonthData ? (
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={sortedConsumptions.slice(-6)} margin={{ top: 10, right: 10, left: 10, bottom: 20 }}>
+                  <BarChart data={sixMonthData} margin={{ top: 10, right: 10, left: 10, bottom: 20 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                     <XAxis 
                       dataKey="date" 
@@ -210,13 +225,11 @@ export default function DashboardView() {
                       tickLine={false} 
                       tick={(props) => {
                         const { x, y, payload, index } = props;
+                        const showYear = !!sixMonthData[index]?.showYear;
                         try {
                           const val = payload.value;
                           const d = parseISO(val + '-01');
                           const month = format(d, 'MMM', { locale: fr }).toUpperCase();
-                          // Show year on 3 positions (first, middle, and last of the 6 points)
-                          const showYear = index === 0 || index === 2 || index === 5;
-                          
                           return (
                             <g transform={`translate(${x},${y})`}>
                               <text x={0} y={0} dy={10} textAnchor="middle" fill="#94a3b8" fontSize={10} fontWeight={600}>

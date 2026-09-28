@@ -5,10 +5,14 @@ import { HelpCircle, Calculator, Zap, Database, Link as LinkIcon, Image as Image
 import { useImagePicker } from '../../hooks/useImagePicker';
 import ImageViewer from '../ui/ImageViewer';
 import { appConfig } from '../../config';
+import UsefulLinksCard from '../features/UsefulLinksCard';
+import { useRemoteConfig } from '../../store/RemoteConfigContext';
+import ExternalLink from '../ui/ExternalLink';
 import { MONETARY_UNIT } from '../../lib/utils';
 
 export default function HelpView() {
   const { state, updateHelpImages } = useApp();
+  const { config, brand, brandName } = useRemoteConfig();
   const [fullScreenImage, setFullScreenImage] = React.useState<string | null>(null);
 
   const { openPicker, picker } = useImagePicker(
@@ -30,37 +34,19 @@ export default function HelpView() {
         <h2 className="text-2xl font-bold">Aide & Informations</h2>
       </div>
 
+      <UsefulLinksCard />
+
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg flex items-center"><LinkIcon size={20} className="mr-2 text-blue-600"/> Ressources Officielles ENEO</CardTitle>
+          <CardTitle className="text-lg flex items-center"><Phone size={20} className="mr-2 text-indigo-600"/> Service client {brandName}</CardTitle>
         </CardHeader>
-        <CardContent className="text-sm text-gray-600 space-y-4">
-          <ul className="list-disc pl-5 space-y-2">
-            <li>
-              <a href="https://www.eneocameroon.cm/" target="_blank" rel="noreferrer" className="text-blue-600 hover:underline font-medium">Site Web Officiel ENEO Cameroun</a>
-            </li>
-            <li>
-              <a href="https://www.eneocameroon.cm/index.php/fr/guide-prepaye-eneo" target="_blank" rel="noreferrer" className="text-blue-600 hover:underline font-medium">Guide Prépayé Eneo (PDF/Infos)</a>
-            </li>
-            <li>
-              <a href="https://my.eneocameroon.cm/" target="_blank" rel="noreferrer" className="text-blue-600 hover:underline font-medium">Portail MyENEO (Paiement & Factures)</a>
-            </li>
-            <li>
-              <a href="https://my.eneocameroon.cm/infos-service-electrique" target="_blank" rel="noreferrer" className="text-blue-600 hover:underline font-medium">Infos Service Électrique (Coupures, etc.)</a>
-            </li>
-          </ul>
-
-          <div className="bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 p-4 rounded-xl mt-4">
-            <h4 className="font-bold text-slate-800 dark:text-slate-100 mb-2">Service Client ENEO</h4>
-              <div className="flex flex-col gap-2">
-                <a href="tel:8010" className="flex items-center text-indigo-700 dark:text-indigo-400 hover:underline">
-                  <Phone size={16} className="mr-2" /> Numéro gratuit: <strong>8010</strong>
-                </a>
-                <a href="mailto:eneo.customercare@eneo.cm" className="flex items-center text-indigo-700 dark:text-indigo-400 hover:underline">
-                  <Mail size={16} className="mr-2" /> À l'écoute de la clientèle: eneo.customercare@eneo.cm
-                </a>
-              </div>
-          </div>
+        <CardContent className="text-sm text-gray-600 space-y-2">
+          <ExternalLink href={`tel:${config.contacts.infoLine}`} showIcon={false} className="flex items-center text-indigo-700 dark:text-indigo-400 hover:underline">
+            <Phone size={16} className="mr-2" /> Numéro gratuit : <strong className="ml-1">{config.contacts.infoLine}</strong>
+          </ExternalLink>
+          <ExternalLink href="mailto:eneo.customercare@eneo.cm" showIcon={false} className="flex items-center text-indigo-700 dark:text-indigo-400 hover:underline">
+            <Mail size={16} className="mr-2" /> À l'écoute de la clientèle : eneo.customercare@eneo.cm
+          </ExternalLink>
         </CardContent>
       </Card>
 
@@ -73,10 +59,13 @@ export default function HelpView() {
             <li><strong>Dashboard Complet :</strong> Vue rapide sur le solde d'énergie estimé, consommation actuelle, prévision des jours restants avant coupure et graphiques.</li>
             <li><strong>Historique (Consommations / Recharges) :</strong> Suivi précis de chaque mois de consommation et achats de crédits en {MONETARY_UNIT}, avec export CSV/JSON et import.</li>
             <li><strong>Calculatrice Intégrée :</strong> Estimations bidirectionnelles "Montant vers kWh" et "kWh vers Montant", avec ajustements rapides des valeurs.</li>
+            <li><strong>Onglet Services :</strong> raccourcis de recharge (MTN / Orange), crédit d'urgence 811 suivi comme un prêt à rembourser, codes du clavier du compteur, diagnostic de la mise à jour TID, accès aux factures par SMS/WhatsApp et annonces de coupures.</li>
+            <li><strong>Recharge depuis un SMS :</strong> collez ou photographiez le SMS de confirmation (même reçu sur un autre téléphone) : montant, date et référence de transaction sont pré-remplis. Achat minimum : {config.minRechargeAmount.toLocaleString('fr-FR')} {MONETARY_UNIT}.</li>
+            <li><strong>Rappels de recharge :</strong> une notification vous prévient quelques jours avant la fin estimée de votre crédit, même si l'application est fermée.</li>
             <li><strong>Profil Utilisateur Complet :</strong> Enregistrement du numéro de compteur, photos de l'écran, photo recto-verso de la carte d'accès.</li>
             <li><strong>Synchronisation Cloud :</strong> Connectez-vous avec Google pour sauvegarder automatiquement toutes vos données et vos photos dans le cloud de manière sécurisée.</li>
             <li><strong>Mode Sombre :</strong> Un affichage élégant qui repose vos yeux, surtout la nuit. Appliqué automatiquement ou manuellement dans vos réglages.</li>
-            <li><strong>Confidentialité avancée :</strong> Pour les visiteurs, mode 100% hors ligne garanti. Pour les membres connectés, vos données sont cryptées et inaccessibles aux tiers.</li>
+            <li><strong>Confidentialité avancée :</strong> Pour les visiteurs, mode 100% hors ligne. Pour les membres connectés, vos données sont stockées dans un espace privé protégé par des règles d'accès strictes : seul votre compte Google peut les lire.</li>
           </ul>
         </CardContent>
       </Card>
@@ -86,7 +75,7 @@ export default function HelpView() {
           <CardTitle className="text-lg flex items-center"><Calculator size={20} className="mr-2 text-indigo-600"/> Comment fonctionne le calcul ?</CardTitle>
         </CardHeader>
         <CardContent className="text-sm text-gray-600 space-y-3">
-          <p>Le calcul est basé sur la méthode <strong>ENEO Cameroun</strong> et dépend de votre consommation moyenne des 6 derniers mois.</p>
+          <p>Le calcul est basé sur la méthode tarifaire de <strong>{brand}</strong> et dépend de votre consommation moyenne des 6 derniers mois.</p>
           <ul className="list-disc pl-5 space-y-1">
             <li><strong>Part Base :</strong> moins chère, mais limitée en quantité selon votre tranche.</li>
             <li><strong>Part Confort :</strong> plus chère, s'applique lorsque vous dépassez la limite de la part base.</li>

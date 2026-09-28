@@ -51,6 +51,23 @@ jobs:
     - name: Sync Capacitor
       run: npx cap sync android
 
+    - name: Restore debug keystore
+      # Clé stable (SHA-1 enregistré dans Firebase pour le Google Sign-In natif). Reconstruite depuis le secret
+      # DEBUG_KEYSTORE_B64 si présent (voir docs/SIGNATURE_DEBUG.md) ; sinon une clé jetable est générée pour que
+      # la compilation reste toujours verte (Google Sign-In natif ne fonctionnera simplement pas avec cet APK-là).
+      working-directory: android
+      run: |
+        if [ -n "${{ secrets.DEBUG_KEYSTORE_B64 }}" ]; then
+          echo "${{ secrets.DEBUG_KEYSTORE_B64 }}" | base64 -d > app/kwa-watt-debug.p12
+          echo "Clé de signature restaurée depuis le secret DEBUG_KEYSTORE_B64."
+        else
+          echo "::warning::DEBUG_KEYSTORE_B64 absent : génération d'une clé de debug jetable (voir docs/SIGNATURE_DEBUG.md)."
+          keytool -genkeypair -v -keystore app/kwa-watt-debug.p12 -storetype PKCS12 \
+            -alias androiddebugkey -storepass android -keypass android \
+            -keyalg RSA -keysize 2048 -validity 10950 \
+            -dname "CN=KWA-WATT CI, OU=Dev, O=KWA-WATT, L=Douala, ST=Littoral, C=CM"
+        fi
+
     - name: Verify assets presence
       run: |
         echo "=== Web assets ==="

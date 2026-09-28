@@ -26,6 +26,30 @@ service cloud.firestore {
                     && isValidUserData(incoming())
                     && incoming().diff(existing()).affectedKeys().hasOnly(['state', 'updatedAt']);
       allow delete: if isSignedIn() && request.auth.uid == userId && isValidId(userId);
+
+      // Photos synchronisées séparément du document principal (limite de 1 Mio/document Firestore) :
+      // chaque photo est son propre petit document, pour ne jamais faire dépasser cette limite.
+      match /photos/{photoId} {
+        function isValidPhoto(data) {
+          return data.keys().hasOnly(['data', 'updatedAt'])
+                 && data.keys().hasAll(['data'])
+                 && data.data is string
+                 && data.data.size() < 1000000;
+        }
+        allow read: if isSignedIn() && request.auth.uid == userId;
+        allow write: if isSignedIn() && request.auth.uid == userId
+                     && isValidId(photoId)
+                     && isValidPhoto(incoming());
+        allow delete: if isSignedIn() && request.auth.uid == userId;
+      }
+    }
+
+    // Configuration distante publique (branding, liens utiles, codes USSD) : lecture libre, gérée à la main
+    // depuis la console Firebase (aucune règle d'écriture ouverte). Absente = l'application utilise ses
+    // valeurs par défaut intégrées, donc ce document est facultatif.
+    match /app_config/{doc} {
+      allow read: if true;
+      allow write: if false;
     }
   }
 }

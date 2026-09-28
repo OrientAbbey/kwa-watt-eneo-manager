@@ -39,3 +39,33 @@ describe("crédit d'urgence = dette", () => {
     expect(estimateDaysLeft(30, 0)).toBeNull();
   });
 });
+
+import { computeEnergyStatus } from "./energy";
+
+describe("computeEnergyStatus", () => {
+  const now = new Date(2026, 4, 10);
+  const cons = (date: string, kwh: number) => ({ id: date, date, kwh });
+  it("n'estime rien sans recharge ce mois-ci", () => {
+    const s = computeEnergyStatus({ consumptions: [cons("2026-04", 90)], recharges: [] }, now);
+    expect(s.balanceKwh).toBeNull();
+    expect(s.daysLeft).toBeNull();
+  });
+  it("calcule solde et jours restants", () => {
+    const s = computeEnergyStatus({
+      consumptions: [cons("2026-03", 90), cons("2026-04", 90), cons("2026-05", 30)],
+      recharges: [{ id: "r", date: "2026-05-02", montant: 5000, kwh: 60 }],
+    }, now);
+    expect(s.balanceKwh).toBe(30);
+    expect(s.average6Months).toBe(70);
+    expect(s.daysLeft).toBe(Math.floor(30 / (70 / 30)));
+  });
+  it("le crédit d'urgence dû est compté même sans recharge", () => {
+    const s = computeEnergyStatus({
+      consumptions: [cons("2026-04", 90), cons("2026-05", 10)],
+      recharges: [],
+      emergencyCredits: [createEmergencyCredit("e", "2026-05-08")],
+    }, now);
+    expect(s.balanceKwh).toBe(0);
+    expect(s.daysLeft).toBe(0);
+  });
+});

@@ -1,4 +1,5 @@
 import { estimateDaysLeft } from "./energy";
+import { MONETARY_UNIT } from "./utils";
 
 /**
  * Rappel PROACTIF de recharge : on calcule la date d'épuisement estimée du crédit et on planifie à l'avance
@@ -53,7 +54,7 @@ export function planRechargeReminders(input: ReminderInput): ReminderPlan[] {
     outstandingEmergencyKwh > 0
       ? ` ${outstandingEmergencyKwh} kWh de crédit d'urgence seront déduits de votre prochaine recharge.`
       : "";
-  const minInfo = `Achat minimum : ${fmtFcfa(minRechargeAmount)} FCFA.`;
+  const minInfo = `Achat minimum : ${fmtFcfa(minRechargeAmount)} ${MONETARY_UNIT}.`;
   const plans: ReminderPlan[] = [];
   const earliest = new Date(now.getTime() + IMMEDIATE_DELAY_MS);
 

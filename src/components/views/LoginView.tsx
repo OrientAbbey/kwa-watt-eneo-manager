@@ -2,9 +2,12 @@ import React, { useState } from 'react';
 import { useApp } from '../../store/AppContext';
 import { signInWithGoogle } from '../../lib/firebase';
 import { generateAvatar } from '../../lib/utils';
+import { useRemoteConfig } from '../../store/RemoteConfigContext';
 
 export default function LoginView() {
   const { setCurrentUser } = useApp();
+  const { config } = useRemoteConfig();
+  const tagline = config.brand.tagline;
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -48,7 +51,7 @@ export default function LoginView() {
             <img src="/icon.png" alt="KWA-WATT Logo" className="w-full h-full object-cover" />
           </div>
           <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">KWA-WATT</h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-2 text-center text-sm">Gérez et suivez rapidement vos consommations ENEO</p>
+          <p className="text-slate-500 dark:text-slate-400 mt-2 text-center text-sm">{tagline}</p>
         </div>
 
         {errorMsg && (

@@ -20,7 +20,7 @@ describe("planRechargeReminders", () => {
     expect(before.at.getTime()).toBeLessThan(day.at.getTime());
     const depletion = new Date(NOW.getTime() + 20 * 24 * 3600 * 1000);
     expect(day.at.getDate()).toBe(depletion.getDate());
-    expect(before.body).toContain("1 000 FCFA");
+    expect(before.body).toContain("1 000 U");
   });
 
   it("déclenche rapidement quand le crédit est déjà dans la fenêtre d'alerte", () => {

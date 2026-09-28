@@ -30,6 +30,11 @@ const config: CapacitorConfig = {
       layoutName: "launch_screen",
       useDialog: false,
     },
+    LocalNotifications: {
+      // Icône monochrome de la barre d'état + couleur d'accent (res/drawable/ic_stat_notify.xml)
+      smallIcon: "ic_stat_notify",
+      iconColor: "#F97316",
+    },
   },
 };
 

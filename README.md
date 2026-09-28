@@ -56,6 +56,23 @@ Boilerplate technique :
 - Icône / splash : `public/icon.png` et `public/splash.png` (config `assets-config.json` pour `@capacitor/assets`).
 - Toutes les constantes applicatives (client ID, scopes, délais de synchro/session, appId, hostname…) sont dans **`src/config.ts`**.
 
+## Configuration à distance (branding, liens, tarifs)
+
+L'app lit un document Firestore public et facultatif `app_config/branding` au démarrage (mis en cache 24h,
+repli automatique sur des valeurs par défaut intégrées si absent ou hors ligne — voir `src/lib/remoteConfig.ts`).
+Cela permet de mettre à jour le nom de l'opérateur (ex. ENEO → SOCADEL), les liens utiles ou les codes USSD
+**sans publier de nouvelle version de l'app** : il suffit de créer/modifier ce document dans la console Firebase.
+
+## Signature debug / Google Sign-In natif
+
+Voir [`docs/SIGNATURE_DEBUG.md`](./docs/SIGNATURE_DEBUG.md) — la clé de signature debug n'est plus committée
+dans le dépôt et doit être fournie via le secret GitHub `DEBUG_KEYSTORE_B64`.
+
+## Synchronisation cloud
+
+Voir [`docs/SYNC_ET_REGLES.md`](./docs/SYNC_ET_REGLES.md) — modèle de données, fusion multi-appareils, et
+déploiement des règles Firestore/Storage.
+
 ## Documentation
 
 Voir [DOCUMENTATION.md](./DOCUMENTATION.md) pour le détail des modules et de l'architecture.

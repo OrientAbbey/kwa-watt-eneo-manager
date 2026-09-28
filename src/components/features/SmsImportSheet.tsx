@@ -1,0 +1,151 @@
+import React, { useEffect, useMemo, useState } from "react";
+import { Camera, ClipboardPaste, Loader2, ScanText } from "lucide-react";
+import BottomSheet from "../ui/BottomSheet";
+import { ParsedSms, parseRechargeSms, parsedFieldCount } from "../../lib/smsParser";
+import { recognizeText } from "../../lib/ocr";
+import { useImagePicker } from "../../hooks/useImagePicker";
+import { useApp } from "../../store/AppContext";
+import { copyText } from "../../lib/clipboard";
+
+interface SmsImportSheetProps {
+  open: boolean;
+  onClose: () => void;
+  /** Reçoit les champs reconnus ; le formulaire de recharge sert d'étape de vérification. */
+  onParsed: (parsed: ParsedSms) => void;
+}
+
+/**
+ * Import d'une recharge depuis le texte d'un SMS de confirmation — collé ou lu par OCR sur une photo/capture.
+ * Le paiement a pu être fait depuis un autre téléphone (agent, proche) : aucune permission SMS n'est requise.
+ */
+export default function SmsImportSheet({ open, onClose, onParsed }: SmsImportSheetProps) {
+  const { showToast } = useApp();
+  const [text, setText] = useState("");
+  const [ocrBusy, setOcrBusy] = useState(false);
+  const [ocrStatus, setOcrStatus] = useState("");
+
+  useEffect(() => {
+    if (!open) {
+      setText("");
+      setOcrBusy(false);
+      setOcrStatus("");
+    }
+  }, [open]);
+
+  const parsed = useMemo(() => parseRechargeSms(text), [text]);
+  const found = parsedFieldCount(parsed);
+
+  const { openPicker, picker } = useImagePicker(
+    async (image) => {
+      setOcrBusy(true);
+      setOcrStatus("Préparation de la lecture…");
+      try {
+        const result = await recognizeText(image, ({ status, progress }) => {
+          const labels: Record<string, string> = {
+            "loading tesseract core": "Chargement du moteur…",
+            "loading language traineddata": "Téléchargement du modèle de langue (une seule fois)…",
+            "initializing api": "Initialisation…",
+            "recognizing text": "Lecture du texte…",
+          };
+          setOcrStatus(`${labels[status] ?? status} ${Math.round(progress * 100)}%`);
+        });
+        if (!result.trim()) {
+          showToast("Aucun texte lu sur l'image. Essayez une capture d'écran nette ou collez le SMS.", "error");
+        } else {
+          setText((prev) => (prev ? `${prev}\n${result}` : result));
+          showToast("Texte lu : vérifiez les valeurs reconnues");
+        }
+      } catch (e) {
+        console.error("OCR failed", e);
+        showToast("Lecture de l'image impossible sur cet appareil. Collez le texte du SMS à la place.", "error");
+      } finally {
+        setOcrBusy(false);
+        setOcrStatus("");
+      }
+    },
+    "Photo ou capture du SMS / reçu",
+    { maxSize: 1800, quality: 0.92 }
+  );
+
+  const paste = async () => {
+    try {
+      const clip = await navigator.clipboard.readText();
+      if (clip) setText(clip);
+      else showToast("Le presse-papiers est vide", "info");
+    } catch {
+      showToast("Collage automatique refusé : appuyez longuement dans la zone de texte pour coller.", "info");
+    }
+  };
+
+  const summary: [string, string | undefined][] = [
+    ["Montant", parsed.montant !== undefined ? parsed.montant.toLocaleString("fr-FR") : undefined],
+    ["Énergie", parsed.kwh !== undefined ? `${parsed.kwh} kWh` : undefined],
+    ["Date", parsed.date],
+    ["Référence", parsed.transactionRef],
+  ];
+
+  return (
+    <BottomSheet open={open} title="Recharge depuis un SMS" onClose={onClose}>
+      {picker}
+      <div className="space-y-4">
+        <p className="text-sm text-slate-500 dark:text-slate-400">
+          Collez le SMS de confirmation (même reçu sur un autre téléphone) ou photographiez-le. Vous pourrez tout vérifier avant d'enregistrer.
+        </p>
+
+        <div className="grid grid-cols-2 gap-2">
+          <button onClick={paste} className="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 text-sm font-semibold hover:bg-indigo-100 dark:hover:bg-indigo-900/40">
+            <ClipboardPaste size={16} /> Coller
+          </button>
+          <button onClick={openPicker} disabled={ocrBusy} className="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 text-sm font-semibold hover:bg-indigo-100 dark:hover:bg-indigo-900/40 disabled:opacity-50">
+            <Camera size={16} /> Photo (OCR)
+          </button>
+        </div>
+
+        {ocrBusy && (
+          <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 rounded-lg p-3">
+            <Loader2 size={16} className="animate-spin shrink-0" /> <span>{ocrStatus || "Lecture en cours…"}</span>
+          </div>
+        )}
+
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          rows={5}
+          placeholder="Ex : Paiement de facture reussi. Montant: 5000 FCFA. ID Transaction: BP260115.1234.A12345…"
+          className="w-full text-sm p-3 border border-slate-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100"
+        />
+
+        {text.trim() && (
+          <div className="rounded-xl border border-slate-100 dark:border-slate-700 p-3">
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1.5"><ScanText size={14} /> Valeurs reconnues ({found}/4)</p>
+            <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-sm">
+              {summary.map(([k, v]) => (
+                <React.Fragment key={k}>
+                  <dt className="text-slate-500 dark:text-slate-400">{k}</dt>
+                  <dd className={v ? "font-semibold text-slate-800 dark:text-slate-100 truncate" : "text-slate-300 dark:text-slate-600"}>{v ?? "—"}</dd>
+                </React.Fragment>
+              ))}
+            </dl>
+            {parsed.token && (
+              <button
+                onClick={async () => showToast((await copyText(parsed.token!)) ? "Jeton copié : saisissez-le sur le compteur" : "Copie impossible", "info")}
+                className="mt-3 text-xs text-indigo-600 underline"
+              >
+                Copier le jeton à 20 chiffres (non enregistré dans l'application)
+              </button>
+            )}
+            {found === 0 && !parsed.token && <p className="text-xs text-amber-600 mt-2">Rien de reconnu : vous pourrez tout saisir à la main dans l'étape suivante.</p>}
+          </div>
+        )}
+
+        <button
+          onClick={() => { onParsed(parsed); onClose(); }}
+          disabled={ocrBusy}
+          className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition-colors disabled:opacity-50"
+        >
+          {text.trim() ? "Continuer et vérifier" : "Saisir à la main"}
+        </button>
+      </div>
+    </BottomSheet>
+  );
+}

@@ -5,11 +5,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { ArrowDownUp, Info } from 'lucide-react';
 import { cn, sortByDate, MONETARY_UNIT } from '../../lib/utils';
 import { Consumption } from '../../types';
+import TrancheSimulatorCard from '../features/TrancheSimulatorCard';
+import { useRemoteConfig } from '../../store/RemoteConfigContext';
 
 type Mode = 'PRICE_TO_KWH' | 'KWH_TO_PRICE';
 
 export default function CalculatorView() {
   const { state, currentMeter } = useApp();
+  const { config } = useRemoteConfig();
+  const minAmount = config.minRechargeAmount;
   const [mode, setMode] = useState<Mode>('KWH_TO_PRICE');
   const [inputValue, setInputValue] = useState<string>('');
   
@@ -169,6 +173,16 @@ export default function CalculatorView() {
         </CardContent>
       </Card>
 
+      {/* Achat minimum */}
+      {result && (
+        (mode === 'PRICE_TO_KWH' && parseFloat(inputValue) < minAmount) ||
+        (mode === 'KWH_TO_PRICE' && result.value < minAmount)
+      ) && (
+        <div className="bg-amber-50 dark:bg-amber-900/20 border-l-4 border-amber-400 p-3 rounded-r-lg text-sm text-amber-800 dark:text-amber-200">
+          L'achat minimum de kWh est de <strong>{minAmount.toLocaleString('fr-FR')} {MONETARY_UNIT}</strong> : un montant inférieur ne peut pas être rechargé sur le compteur.
+        </div>
+      )}
+
       {/* Result Card */}
       {result && (
         <Card className="bg-indigo-600 text-white border-transparent">
@@ -196,6 +210,8 @@ export default function CalculatorView() {
           </CardContent>
         </Card>
       )}
+
+      <TrancheSimulatorCard />
 
     </div>
   );

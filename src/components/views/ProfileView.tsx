@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../../store/AppContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
-import { LogOut, Trash2, Edit3, Plus, User, Camera as CameraIcon, Hash, MapPin, Mail, Loader2 } from 'lucide-react';
+import { LogOut, Trash2, Edit3, Plus, User, Camera as CameraIcon, Hash, MapPin, Mail, Loader2, FileText, CalendarDays } from 'lucide-react';
 import { logOut, deleteAccount } from '../../lib/firebase';
 import { Dialog } from '@capacitor/dialog';
 import { useImagePicker } from '../../hooks/useImagePicker';
 import ImageViewer from '../ui/ImageViewer';
+import CopyableValue from '../ui/CopyableValue';
 
 const fieldClass = "flex-1 min-w-[120px] p-2 border border-gray-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-800";
 
@@ -291,8 +292,57 @@ export default function ProfileView() {
               value={localProfile.meterNumber || ''}
               onChange={handleChange}
               placeholder="Ex: 01234567891"
+              inputMode="numeric"
               className="w-full p-2 border border-gray-300 dark:border-slate-700 border-dashed rounded-lg bg-gray-50 dark:bg-gray-900 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500 font-mono tracking-wider text-slate-800 dark:text-slate-100"
             />
+            {currentMeter.profile.meterNumber && (
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 flex items-center gap-1">
+                Enregistré : <CopyableValue value={currentMeter.profile.meterNumber} label="N° de compteur" className="font-semibold text-indigo-700 dark:text-indigo-400" />
+              </p>
+            )}
+            <p className="text-[11px] text-slate-400 mt-1">Astuce : tapez <span className="font-mono font-bold">804</span> sur le clavier du compteur pour afficher ce numéro.</p>
+          </div>
+
+          <div>
+            <label className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+              <FileText size={16} className="mr-2 text-gray-400" />
+              Numéro de contrat / d'abonné (facultatif)
+            </label>
+            <input
+              type="text"
+              name="contractNumber"
+              value={localProfile.contractNumber || ''}
+              onChange={handleChange}
+              placeholder="Figure sur votre facture ou votre contrat"
+              className="w-full p-2 border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-lg focus:ring-2 focus:ring-indigo-500 font-mono"
+            />
+            {currentMeter.profile.contractNumber && (
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 flex items-center gap-1">
+                Enregistré : <CopyableValue value={currentMeter.profile.contractNumber} label="N° de contrat" className="font-semibold text-indigo-700 dark:text-indigo-400" />
+              </p>
+            )}
+            <p className="text-[11px] text-slate-400 mt-1">Sert à récupérer vos factures et reçus par SMS ou WhatsApp (onglet Services).</p>
+          </div>
+
+          <div>
+            <label className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+              <CalendarDays size={16} className="mr-2 text-gray-400" />
+              Année de pose du compteur (facultatif)
+            </label>
+            <input
+              type="number"
+              inputMode="numeric"
+              min={2000}
+              max={new Date().getFullYear()}
+              value={localProfile.installYear ?? ''}
+              onChange={e => {
+                const v = parseInt(e.target.value, 10);
+                setLocalProfile(prev => ({ ...prev, installYear: Number.isFinite(v) ? v : undefined }));
+              }}
+              placeholder="Ex: 2019"
+              className="w-full p-2 border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-lg focus:ring-2 focus:ring-indigo-500"
+            />
+            <p className="text-[11px] text-slate-400 mt-1">Aide à savoir si votre compteur est concerné par la mise à jour TID.</p>
           </div>
 
           <div>
@@ -329,7 +379,7 @@ export default function ProfileView() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Photos du compteur (Offline)</CardTitle>
+          <CardTitle>Photos du compteur</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -367,7 +417,9 @@ export default function ProfileView() {
       
       <div className="bg-amber-50 dark:bg-amber-900/20 border-l-4 border-amber-400 p-4 rounded-r-lg">
         <p className="text-sm text-amber-800 dark:text-amber-200">
-          Ces informations restent strictement sur cet appareil (mode offline). Elles vous sont utiles pour avoir rapidement les informations sous la main lors d'une recharge en agence.
+          {currentUser?.type === 'google'
+            ? "Vos photos (dont la carte d'identité éventuelle) sont synchronisées avec votre espace cloud privé, visible uniquement par votre compte Google. N'ajoutez que ce dont vous avez besoin, et supprimez-les ici pour les retirer aussi du cloud."
+            : "En mode visiteur, ces informations restent strictement sur cet appareil. Elles vous sont utiles pour avoir rapidement les informations sous la main lors d'une recharge en agence."}
         </p>
       </div>
 

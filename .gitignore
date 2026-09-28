@@ -12,3 +12,11 @@ platform-tools/
 
 # Firebase native config (contains project credentials) - never commit
 google-services.json
+
+# Moteur OCR copié depuis node_modules au build (scripts/copy-ocr-assets.mjs)
+public/tesseract/
+
+# Clé de signature debug : générée en CI depuis un secret, jamais versionnée
+android/app/*.p12
+android/app/*.keystore
+android/app/*.jks

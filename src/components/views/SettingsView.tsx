@@ -19,6 +19,8 @@ export default function SettingsView() {
     anomalyPercentage: state.settings.alerts?.anomalyPercentage ?? DEFAULT_ALERTS.anomalyPercentage,
     toastDuration: state.settings.alerts?.toastDuration ?? 6,
     enableNotifications: state.settings.alerts?.enableNotifications ?? false,
+    rechargeReminder: state.settings.alerts?.rechargeReminder ?? DEFAULT_ALERTS.rechargeReminder,
+    rechargeReminderDays: state.settings.alerts?.rechargeReminderDays ?? DEFAULT_ALERTS.rechargeReminderDays,
   });
   const [tariffs, setTariffs] = useState(state.settings.tariffs || DEFAULT_SETTINGS.tariffs);
   const [exportFormat, setExportFormat] = useState(state.settings.exportFormat || "csv");
@@ -81,8 +83,22 @@ export default function SettingsView() {
     }
   };
 
+  const updateTariffCell = (idx: number, key: 'min' | 'max' | 'base' | 'comfort', raw: string) => {
+    setTariffs(s => ({
+      ...s,
+      [clientType]: s[clientType].map((row, i) => {
+        if (i !== idx) return row;
+        // Un champ « Max » vide = tranche sans plafond (dernière tranche)
+        if (key === 'max' && raw.trim() === '') return { ...row, max: Infinity };
+        return { ...row, [key]: parseFloat(raw) || 0 };
+      })
+    }));
+  };
+
   const addTarrifRow = () => {
-    const min = tariffs[clientType].length > 0 ? tariffs[clientType][tariffs[clientType].length -1].max + 1 : 0;
+    const list = tariffs[clientType];
+    const last = list[list.length - 1];
+    const min = last ? (Number.isFinite(last.max) ? last.max + 1 : last.min + 100) : 0;
     setTariffs(s => ({
       ...s,
       [clientType]: [...s[clientType], { min, max: min + 100, base: 0, comfort: 0, tva_thresh: 220 }]
@@ -181,32 +197,16 @@ export default function SettingsView() {
                   {tariffs[clientType].map((tranche, idx) => (
                     <tr key={idx} className="border-b last:border-0 border-slate-100 dark:border-slate-700">
                       <td className="py-2">
-                        <input type="number" value={tranche.min ?? ''} onChange={e => {
-                          const newT = {...tariffs};
-                          newT[clientType][idx].min = parseFloat(e.target.value) || 0;
-                          setTariffs(newT);
-                        }} className="w-16 p-1 border rounded bg-slate-50 dark:bg-slate-900/50" />
+                        <input type="number" value={tranche.min ?? ''} onChange={e => updateTariffCell(idx, 'min', e.target.value)} className="w-16 p-1 border rounded bg-slate-50 dark:bg-slate-900/50" />
                       </td>
                       <td className="py-2">
-                        <input type="number" value={tranche.max ?? ''} onChange={e => {
-                          const newT = {...tariffs};
-                          newT[clientType][idx].max = parseFloat(e.target.value) || 0;
-                          setTariffs(newT);
-                        }} className="w-16 p-1 border rounded bg-slate-50 dark:bg-slate-900/50" />
+                        <input type="number" placeholder="∞" value={Number.isFinite(tranche.max) ? tranche.max : ''} onChange={e => updateTariffCell(idx, 'max', e.target.value)} className="w-16 p-1 border rounded bg-slate-50 dark:bg-slate-900/50" />
                       </td>
                       <td className="py-2">
-                        <input type="number" value={tranche.base ?? ''} onChange={e => {
-                          const newT = {...tariffs};
-                          newT[clientType][idx].base = parseFloat(e.target.value) || 0;
-                          setTariffs(newT);
-                        }} className="w-16 p-1 border rounded bg-slate-50 dark:bg-slate-900/50 dark:border-slate-700 dark:text-slate-100" />
+                        <input type="number" value={tranche.base ?? ''} onChange={e => updateTariffCell(idx, 'base', e.target.value)} className="w-16 p-1 border rounded bg-slate-50 dark:bg-slate-900/50 dark:border-slate-700 dark:text-slate-100" />
                       </td>
                       <td className="py-2">
-                        <input type="number" value={tranche.comfort ?? ''} onChange={e => {
-                          const newT = {...tariffs};
-                          newT[clientType][idx].comfort = parseFloat(e.target.value) || 0;
-                          setTariffs(newT);
-                        }} className="w-16 p-1 border rounded bg-slate-50 dark:bg-slate-900/50 dark:border-slate-700 dark:text-slate-100" />
+                        <input type="number" value={tranche.comfort ?? ''} onChange={e => updateTariffCell(idx, 'comfort', e.target.value)} className="w-16 p-1 border rounded bg-slate-50 dark:bg-slate-900/50 dark:border-slate-700 dark:text-slate-100" />
                       </td>
                       <td className="py-2 text-right">
                         <button onClick={() => removeTariffRow(idx)} className="text-red-400 hover:text-red-600 p-1">X</button>
@@ -298,8 +298,38 @@ export default function SettingsView() {
           </div>
           <div className="flex items-center justify-between mt-4 border-t pt-4">
             <div className="mr-4">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Rappel de recharge</label>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Vous prévient avant la fin estimée de votre crédit, même si l'application est fermée.</p>
+              {alerts.rechargeReminder && (
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="text-xs text-gray-500 dark:text-gray-400">Prévenir</span>
+                  <input
+                    type="number" min="0" max="30"
+                    value={alerts.rechargeReminderDays}
+                    onChange={(e) => {
+                      const v = parseInt(e.target.value, 10);
+                      setAlerts(s => ({...s, rechargeReminderDays: Number.isFinite(v) ? Math.min(30, Math.max(0, v)) : 3}));
+                    }}
+                    className="w-14 p-1 border border-slate-200 dark:border-slate-700 rounded text-xs bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100"
+                  />
+                  <span className="text-xs text-gray-500 dark:text-gray-400">jour(s) avant l'épuisement estimé</span>
+                </div>
+              )}
+              {alerts.rechargeReminder && !alerts.enableNotifications && (
+                <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">Activez les notifications ci-dessous pour recevoir ce rappel.</p>
+              )}
+            </div>
+            <input
+              type="checkbox"
+              checked={alerts.rechargeReminder}
+              onChange={(e) => setAlerts(s => ({...s, rechargeReminder: e.target.checked}))}
+              className="w-5 h-5"
+            />
+          </div>
+          <div className="flex items-center justify-between mt-4 border-t pt-4">
+            <div className="mr-4">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Notifications</label>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Alertes de consommation (début de mois, seuils, hausse brutale).</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Alertes de consommation (début de mois, seuils, hausse brutale) et rappels de recharge.</p>
             </div>
             <input 
               type="checkbox" 

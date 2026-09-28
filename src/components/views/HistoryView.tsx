@@ -1,7 +1,7 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useApp } from '../../store/AppContext';
 import { Card, CardContent } from '../ui/Card';
-import { Plus, Trash2, Zap, BatteryCharging, Download, Upload, Edit, SortDesc, SortAsc } from 'lucide-react';
+import { Plus, Trash2, Zap, BatteryCharging, Download, Upload, Edit, SortDesc, SortAsc, ClipboardPaste, Calculator as CalcIcon, AlertTriangle } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -12,27 +12,37 @@ import { Dialog } from '@capacitor/dialog';
 import { sortByDate, MONETARY_UNIT } from '../../lib/utils';
 import { serializeExport, parseExport } from '../../lib/io';
 import { Consumption, Recharge } from '../../types';
+import { useRemoteConfig } from '../../store/RemoteConfigContext';
+import { useNav } from '../../store/NavContext';
+import SmsImportSheet from '../features/SmsImportSheet';
+import CopyableValue from '../ui/CopyableValue';
+import { ParsedSms } from '../../lib/smsParser';
+import { calculateAverageConsumption, calculateKwh } from '../../lib/eneo';
+import { outstandingEmergencyKwh } from '../../lib/energy';
 
 interface EditableRow {
   id: string;
   date: string;
   kwh?: number;
   montant?: number;
+  transactionRef?: string;
 }
 
 interface HistoryRowProps {
   title: string;
   subtitle: string;
+  extra?: React.ReactNode;
   onEdit: () => void;
   onDelete: () => void;
 }
 
-function HistoryRow({ title, subtitle, onEdit, onDelete }: HistoryRowProps): React.ReactElement {
+function HistoryRow({ title, subtitle, extra, onEdit, onDelete }: HistoryRowProps): React.ReactElement {
   return (
     <div className="flex justify-between items-center p-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-sm">
       <div className="flex-1 cursor-pointer" onClick={onEdit}>
         <p className="font-semibold text-gray-800 dark:text-gray-100 capitalize">{title}</p>
         <p className="text-sm text-gray-500 dark:text-gray-400">{subtitle}</p>
+        {extra}
       </div>
       <div className="flex gap-1">
         <button onClick={onEdit} className="text-indigo-400 hover:text-indigo-600 p-2" aria-label="Modifier"><Edit size={16} /></button>
@@ -44,6 +54,9 @@ function HistoryRow({ title, subtitle, onEdit, onDelete }: HistoryRowProps): Rea
 
 export default function HistoryView() {
   const { state, currentMeter, addConsumption, updateConsumption, deleteConsumption, addRecharge, updateRecharge, deleteRecharge, importData, showToast, clearSection, setLoading } = useApp();
+  const { config } = useRemoteConfig();
+  const { consumeIntent } = useNav();
+  const minAmount = config.minRechargeAmount;
 
   const [tab, setTab] = useState<'consommations' | 'recharges'>('consommations');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
@@ -54,40 +67,107 @@ export default function HistoryView() {
   const [dateStr, setDateStr] = useState(format(new Date(), tab === 'consommations' ? 'yyyy-MM' : 'yyyy-MM-dd'));
   const [val1, setVal1] = useState(''); // kwh or montant
   const [val2, setVal2] = useState(''); // -   or kwh
+  const [txRef, setTxRef] = useState('');
+  const [smsOpen, setSmsOpen] = useState(false);
+  const [fromSms, setFromSms] = useState(false);
+  const [kwhEstimated, setKwhEstimated] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const today = format(new Date(), 'yyyy-MM-dd');
+
+  const openAddForm = (target: 'consommations' | 'recharges') => {
+    setTab(target);
+    setDateStr(format(new Date(), target === 'consommations' ? 'yyyy-MM' : 'yyyy-MM-dd'));
+    setEditingId(null);
+    setVal1('');
+    setVal2('');
+    setTxRef('');
+    setFromSms(false);
+    setKwhEstimated(false);
+    setIsAdding(true);
+  };
+
+  // Actions demandées par le menu global (bouton +, raccourcis)
+  useEffect(() => {
+    const intent = consumeIntent();
+    if (!intent) return;
+    if (intent.type === 'add-recharge') openAddForm('recharges');
+    else if (intent.type === 'add-consumption') openAddForm('consommations');
+    else if (intent.type === 'paste-sms') { setTab('recharges'); setSmsOpen(true); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const onSmsParsed = (parsed: ParsedSms) => {
+    openAddForm('recharges');
+    setFromSms(true);
+    if (parsed.date) setDateStr(parsed.date);
+    if (parsed.montant !== undefined) setVal1(String(parsed.montant));
+    if (parsed.kwh !== undefined) setVal2(String(parsed.kwh));
+    if (parsed.transactionRef) setTxRef(parsed.transactionRef);
+  };
+
+  const currentMonth = format(new Date(), 'yyyy-MM');
+  const autoCumul = currentMeter.consumptions.find(c => c.date === currentMonth)?.kwh ?? 0;
+  const autoAverage = useMemo(
+    () => calculateAverageConsumption([...currentMeter.consumptions].sort((a, b) => a.date.localeCompare(b.date)).map(c => c.kwh)),
+    [currentMeter.consumptions]
+  );
+  const debtKwh = outstandingEmergencyKwh(currentMeter.emergencyCredits);
+
+  const estimateKwh = () => {
+    const montant = parseFloat(val1);
+    if (isNaN(montant) || montant <= 0) return showToast('Saisissez d\'abord le montant', 'error');
+    const res = calculateKwh(montant, autoCumul, autoAverage, state.settings.clientType, state.settings.tva / 100, state.settings.tariffs);
+    setVal2(String(res.value));
+    setKwhEstimated(true);
+  };
 
   const handleAdd = async () => {
     if (tab === 'consommations') {
       const kwh = parseFloat(val1);
-      if (!dateStr || isNaN(kwh)) return showToast('Données invalides');
+      if (!dateStr || isNaN(kwh) || kwh < 0) return showToast('Données invalides', 'error');
       if (editingId) {
         const { value } = await Dialog.confirm({ title: 'Confirmation', message: "Voulez-vous modifier cette entrée ?" });
         if (!value) return;
         updateConsumption({ id: editingId, date: dateStr, kwh });
         showToast("Entrée modifiée");
       } else {
-        addConsumption({ id: uuidv4(), date: dateStr, kwh });
+        if (!addConsumption({ id: uuidv4(), date: dateStr, kwh })) {
+          return showToast('Un relevé existe déjà pour ce mois : modifiez-le depuis la liste.', 'error');
+        }
         showToast("Entrée ajoutée");
       }
     } else {
       const montant = parseFloat(val1);
       const kwh = parseFloat(val2);
-      if (!dateStr || isNaN(montant) || isNaN(kwh)) return showToast('Données invalides');
+      if (!dateStr || isNaN(montant) || isNaN(kwh)) return showToast('Données invalides', 'error');
+      if (montant <= 0 || kwh <= 0) return showToast('Le montant et les kWh doivent être positifs', 'error');
+      if (dateStr > today) return showToast('La date de recharge ne peut pas être dans le futur', 'error');
+      const original = editingId ? currentMeter.recharges.find(r => r.id === editingId) : undefined;
+      // Achat minimum : appliqué aux nouvelles recharges (et si on modifie le montant d'une ancienne)
+      if (montant < minAmount && (!original || original.montant !== montant)) {
+        return showToast(`Achat minimum : ${minAmount.toLocaleString('fr-FR')} ${MONETARY_UNIT}`, 'error');
+      }
+      const ref = txRef.trim() || undefined;
       if (editingId) {
         const { value } = await Dialog.confirm({ title: 'Confirmation', message: "Voulez-vous modifier cette entrée ?" });
         if (!value) return;
-        updateRecharge({ id: editingId, date: dateStr, montant, kwh });
+        updateRecharge({ ...(original || {}), id: editingId, date: dateStr, montant, kwh, transactionRef: ref });
         showToast("Entrée modifiée");
       } else {
-        addRecharge({ id: uuidv4(), date: dateStr, montant, kwh });
-        showToast("Entrée ajoutée");
+        const result = addRecharge({ id: uuidv4(), date: dateStr, montant, kwh, transactionRef: ref, source: fromSms ? 'sms' : 'manual' });
+        if (result === 'duplicate') return showToast('Cette recharge est déjà enregistrée (même date, montant et référence).', 'error');
+        showToast(debtKwh > 0 ? `Recharge ajoutée — ${debtKwh} kWh de crédit d'urgence déduits` : "Entrée ajoutée");
       }
     }
     setIsAdding(false);
     setEditingId(null);
     setVal1('');
     setVal2('');
+    setTxRef('');
+    setFromSms(false);
+    setKwhEstimated(false);
   };
 
   const handleEdit = (item: EditableRow) => {
@@ -98,7 +178,10 @@ export default function HistoryView() {
     } else {
       setVal1(item.montant.toString());
       setVal2(item.kwh.toString());
+      setTxRef(item.transactionRef || '');
     }
+    setFromSms(false);
+    setKwhEstimated(false);
     setIsAdding(true);
   };
 
@@ -196,7 +279,13 @@ export default function HistoryView() {
     <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300 relative pb-10">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Historique</h2>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap justify-end">
+          <button onClick={() => openAddForm(tab)} className="text-xs flex items-center text-white bg-orange-500 hover:bg-orange-600 px-2 py-1 rounded font-semibold">
+            <Plus size={14} className="mr-1" /> Ajouter
+          </button>
+          <button onClick={() => { setTab('recharges'); setSmsOpen(true); }} className="text-xs flex items-center text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 px-2 py-1 rounded font-semibold">
+            <ClipboardPaste size={14} className="mr-1" /> Depuis un SMS
+          </button>
           <input type="file" ref={fileInputRef} onChange={handleFileImport} className="hidden" accept=".json,.csv" />
           <button onClick={async () => {
             await Dialog.alert({ title: 'Format requis', message: `Format requis pour le fichier JSON:\n{\n  "consumptions": [{ "id": "...", "date": "YYYY-MM", "kwh": 0 }],\n  "recharges": [{ "id": "...", "date": "YYYY-MM-DD", "montant": 0, "kwh": 0 }]\n}\n\nFormat CSV:\nEntête: type,id,date,kwh,montant\nExemple (conso): consommation,,2023-11,150.5,\nExemple (recharge): recharge,,2023-11-05,50.2,5000\n\nSi une date existe déjà, l'entrée sera mise à jour.`});
@@ -240,7 +329,7 @@ export default function HistoryView() {
               <h3 className="font-semibold text-lg text-slate-800 dark:text-slate-100 border-b pb-2 mb-2">{editingId ? 'Modifier l\'entrée' : 'Ajouter une entrée'}</h3>
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Mois / Date</label>
-                <input type={tab === 'consommations' ? 'month' : 'date'} value={dateStr} onChange={e => setDateStr(e.target.value)} className="w-full text-sm p-3 border border-slate-200 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100" />
+                <input type={tab === 'consommations' ? 'month' : 'date'} max={tab === 'consommations' ? format(new Date(), 'yyyy-MM') : today} value={dateStr} onChange={e => setDateStr(e.target.value)} className="w-full text-sm p-3 border border-slate-200 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100" />
               </div>
               
               {tab === 'consommations' ? (
@@ -249,15 +338,32 @@ export default function HistoryView() {
                   <input type="number" value={val1} onChange={e => setVal1(e.target.value)} className="w-full text-sm p-3 border border-slate-200 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100" placeholder="ex: 245.5" />
                 </div>
               ) : (
-                <div className="flex space-x-3">
-                  <div className="flex-1">
-                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Montant ({MONETARY_UNIT})</label>
-                    <input type="number" value={val1} onChange={e => setVal1(e.target.value)} className="w-full text-sm p-3 border border-slate-200 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100" placeholder="ex: 23000" />
+                <div className="space-y-3">
+                  <div className="flex space-x-3">
+                    <div className="flex-1">
+                      <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Montant ({MONETARY_UNIT})</label>
+                      <input type="number" inputMode="numeric" min={minAmount} value={val1} onChange={e => { setVal1(e.target.value); }} className="w-full text-sm p-3 border border-slate-200 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100" placeholder={`min. ${minAmount}`} />
+                    </div>
+                    <div className="flex-1">
+                      <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Énergie (kWh)</label>
+                      <input type="number" inputMode="decimal" value={val2} onChange={e => { setVal2(e.target.value); setKwhEstimated(false); }} className="w-full text-sm p-3 border border-slate-200 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100" placeholder="ex: 244.1" />
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Énergie (kWh)</label>
-                    <input type="number" value={val2} onChange={e => setVal2(e.target.value)} className="w-full text-sm p-3 border border-slate-200 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100" placeholder="ex: 244.1" />
+                  {parseFloat(val1) > 0 && parseFloat(val1) < minAmount && (
+                    <p className="text-xs text-red-600 flex items-center gap-1"><AlertTriangle size={12} /> Achat minimum : {minAmount.toLocaleString('fr-FR')} {MONETARY_UNIT}</p>
+                  )}
+                  <button type="button" onClick={estimateKwh} className="text-xs text-indigo-600 hover:underline flex items-center gap-1">
+                    <CalcIcon size={12} /> Estimer les kWh selon ma tranche
+                  </button>
+                  {kwhEstimated && <p className="text-[11px] text-amber-600">Valeur estimée : remplacez-la par celle du SMS ou du compteur si vous l'avez.</p>}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Référence de transaction (facultatif)</label>
+                    <input type="text" value={txRef} onChange={e => setTxRef(e.target.value)} maxLength={60} className="w-full text-sm p-3 border border-slate-200 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 font-mono" placeholder="Figure dans le SMS de confirmation" />
+                    <p className="text-[11px] text-slate-400 mt-1">Utile en cas de réclamation auprès de l'opérateur ou de l'agent de paiement.</p>
                   </div>
+                  {debtKwh > 0 && !editingId && (
+                    <p className="text-xs text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-950/30 rounded-lg p-2">{debtKwh} kWh de crédit d'urgence (811) seront déduits de cette recharge.</p>
+                  )}
                 </div>
               )}
               <div className="flex space-x-3 pt-4">
@@ -295,6 +401,7 @@ export default function HistoryView() {
               <HistoryRow
                 title={format(parseISO(r.date), 'dd MMM yyyy', { locale: fr })}
                 subtitle={`${r.montant.toLocaleString()} ${MONETARY_UNIT} • ${r.kwh.toFixed(1)} kWh`}
+                extra={r.transactionRef ? <div className="text-xs text-slate-400 mt-0.5 flex items-center gap-1" onClick={e => e.stopPropagation()}>Réf. <CopyableValue value={r.transactionRef} label="Référence" className="text-xs" /></div> : undefined}
                 onEdit={() => handleEdit(r)}
                 onDelete={async () => {
                   const { value } = await Dialog.confirm({ title: 'Confirmation', message: "Voulez-vous supprimer cette recharge ?" });
@@ -309,15 +416,7 @@ export default function HistoryView() {
         )}
       </div>
 
-      {/* Floating Add Button */}
-      {!isAdding && (
-        <button 
-          onClick={() => { setIsAdding(true); setEditingId(null); setVal1(''); setVal2(''); }}
-          className="fixed bottom-24 right-6 bg-orange-500 text-white p-4 rounded-full shadow-lg shadow-orange-500/30 hover:bg-orange-600 transition-transform hover:scale-105 z-30"
-        >
-          <Plus size={24} />
-        </button>
-      )}
+      <SmsImportSheet open={smsOpen} onClose={() => setSmsOpen(false)} onParsed={onSmsParsed} />
     </div>
   );
 }

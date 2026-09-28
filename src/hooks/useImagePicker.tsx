@@ -5,7 +5,13 @@ import { compressImage } from '../lib/utils';
 
 export type ImageSource = 'camera' | 'gallery';
 
-export function useImagePicker(onImage: (base64: string) => void, title?: string) {
+export interface ImagePickerOptions {
+  /** Plus grand côté en pixels après compression (défaut 720, à augmenter pour l'OCR). */
+  maxSize?: number;
+  quality?: number;
+}
+
+export function useImagePicker(onImage: (base64: string) => void, title?: string, options: ImagePickerOptions = {}) {
   const [isPickerOpen, setIsPickerOpen] = useState(false);
 
   const openPicker = () => setIsPickerOpen(true);
@@ -20,7 +26,7 @@ export function useImagePicker(onImage: (base64: string) => void, title?: string
       });
 
       if (image.base64String) {
-        const base64 = await compressImage(`data:image/${image.format};base64,${image.base64String}`);
+        const base64 = await compressImage(`data:image/${image.format};base64,${image.base64String}`, options.maxSize, options.quality);
         onImage(base64);
       }
     } catch (error: any) {

@@ -1,0 +1,11 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+    // Non utilisé pour le moment : les photos passent par Firestore (sous-collection user_data/{uid}/photos),
+    // pas par Storage, pour rester sur l'offre 100% gratuite (pas de facturation à l'usage type Storage/Functions).
+    // Ce fichier bloque tout accès par défaut si le bucket est un jour activé par erreur.
+  }
+}

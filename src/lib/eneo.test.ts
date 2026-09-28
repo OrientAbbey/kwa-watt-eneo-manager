@@ -70,3 +70,16 @@ describe('calculateKwh (amount -> kWh)', () => {
     expect(res.value).toBeCloseTo(Math.round((5000 / comfortPrice) * 100) / 100, 5);
   });
 });
+describe("getTariffRange — moyennes fractionnaires", () => {
+  it("ne bascule pas sur la dernière tranche pour une moyenne entre deux tranches (110,4 kWh)", () => {
+    expect(getTariffRange(110.4, "residential").min).toBe(111);
+    expect(getTariffRange(220.5, "residential").min).toBe(221);
+    expect(getTariffRange(400.2, "residential").min).toBe(401);
+  });
+  it("garde les bornes entières inchangées", () => {
+    expect(getTariffRange(0, "residential").min).toBe(0);
+    expect(getTariffRange(110, "residential").min).toBe(0);
+    expect(getTariffRange(111, "residential").min).toBe(111);
+    expect(getTariffRange(5000, "residential").min).toBe(801);
+  });
+});

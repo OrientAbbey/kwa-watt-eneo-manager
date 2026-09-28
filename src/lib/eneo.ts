@@ -2,6 +2,15 @@ import { MONETARY_UNIT } from './utils';
 
 export const TVA_RATE = 0.1925; // 19.25%
 
+/**
+ * Montant minimum d'un achat de kWh (recharge prépayée) : 1000 FCFA.
+ * Source : guide prépayé officiel ENEO/SOCADEL. Surchargeable via la config à distance.
+ */
+export const MIN_RECHARGE_AMOUNT = 1000;
+
+/** Crédit d'urgence accordé par le code 811 sur le compteur, en kWh. */
+export const EMERGENCY_CREDIT_KWH = 10;
+
 export interface TariffRange {
   min: number;
   max: number;
@@ -35,8 +44,11 @@ export function calculateAverageConsumption(consumptions: number[]): number {
 export function getTariffRange(average: number, clientType: "residential" | "professional", tariffs: Record<"residential" | "professional", TariffRange[]> = TARIFFS): TariffRange {
   const type = clientType === "professional" ? "professional" : "residential";
   const ranges = tariffs[type];
+  // Les tranches sont ordonnées et bornées par des entiers (0-110, 111-220…). Une moyenne fractionnaire
+  // (ex. 110,4) tombait dans le « trou » entre deux tranches et basculait à tort sur la dernière tranche (800+).
+  // On retient donc la première tranche dont le plafond n'est pas dépassé.
   for (const range of ranges) {
-    if (average >= range.min && average <= range.max) {
+    if (average <= range.max) {
       return range;
     }
   }

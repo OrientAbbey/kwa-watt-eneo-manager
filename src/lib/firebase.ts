@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, signInWithRedirect, signInWithCredential, deleteUser } from 'firebase/auth';
-import { deleteDoc, doc, getFirestore } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDocs, getFirestore } from 'firebase/firestore';
 import { Capacitor } from '@capacitor/core';
 import { SocialLogin } from '@capgo/capacitor-social-login';
 import { appConfig } from '../config';
@@ -90,6 +90,9 @@ export const deleteAccount = async () => {
     throw new Error('Aucun utilisateur connecté.');
   }
   try {
+    // Photos synchronisées (sous-collection) puis document principal
+    const photos = await getDocs(collection(db, 'user_data', user.uid, 'photos'));
+    await Promise.all(photos.docs.map((d) => deleteDoc(d.ref)));
     await deleteDoc(doc(db, 'user_data', user.uid));
   } catch (error) {
     console.error('Failed to delete cloud data', error);

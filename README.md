@@ -59,9 +59,10 @@ Boilerplate technique :
 ## Configuration à distance (branding, liens, tarifs)
 
 L'app lit un document Firestore public et facultatif `app_config/branding` au démarrage (mis en cache 24h,
-repli automatique sur des valeurs par défaut intégrées si absent ou hors ligne — voir `src/lib/remoteConfig.ts`).
+repli automatique sur des valeurs par défaut intégrées si absent ou hors ligne — voir `src/lib/remoteConfigSchema.ts`).
 Cela permet de mettre à jour le nom de l'opérateur (ex. ENEO → SOCADEL), les liens utiles ou les codes USSD
-**sans publier de nouvelle version de l'app** : il suffit de créer/modifier ce document dans la console Firebase.
+**sans publier de nouvelle version de l'app** : `npx tsx scripts/seed-remote-config.ts` (procédure complète,
+y compris récupérer une clé d'administrateur Firebase, dans [`docs/CONFIG_A_DISTANCE.md`](./docs/CONFIG_A_DISTANCE.md)).
 
 ## Signature debug / Google Sign-In natif
 

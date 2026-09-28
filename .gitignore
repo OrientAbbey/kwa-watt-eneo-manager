@@ -20,3 +20,10 @@ public/tesseract/
 android/app/*.p12
 android/app/*.keystore
 android/app/*.jks
+
+# Copie de travail locale de l'admin (peut contenir des liens/valeurs internes) : jamais commitée.
+scripts/remote-config.seed.json
+
+# Clé de compte de service Firebase (script d'administration) : ne JAMAIS commit.
+scripts/*serviceAccount*.json
+scripts/*service-account*.json

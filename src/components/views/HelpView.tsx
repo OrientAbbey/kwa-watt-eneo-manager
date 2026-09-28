@@ -1,7 +1,7 @@
 import React from 'react';
 import { useApp } from '../../store/AppContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
-import { HelpCircle, Calculator, Zap, Database, Link as LinkIcon, Image as ImageIcon, Trash2, Plus, Phone, Mail } from 'lucide-react';
+import { HelpCircle, Calculator, Zap, Database, Image as ImageIcon, Trash2, Plus, Phone, Mail } from 'lucide-react';
 import { useImagePicker } from '../../hooks/useImagePicker';
 import ImageViewer from '../ui/ImageViewer';
 import { appConfig } from '../../config';

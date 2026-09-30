@@ -108,6 +108,12 @@ describe("robustesse au bruit d'OCR", () => {
     expect(parseRechargeSms("N° Compteur: 01234567852").meterNumber).toBe("01234567852");
     expect(parseRechargeSms("Énergie kWh : 12,5").kwh).toBe(12.5);
   });
+  it("lit un « O » isolé comme un zéro (TVA / dette / frais)", () => {
+    const p = parseRechargeSms("TVA: O FCFA; Frais: 1OO FCFA; Dette: O FCFA;");
+    expect(p.tva).toBe(0);
+    expect(p.fees).toBe(100);
+    expect(p.dette).toBe(0);
+  });
   it("ne prend pas un mot ressemblant à un nombre pour un montant", () => {
     expect(parseRechargeSms("Montant: lol FCFA").montant).toBeUndefined();
   });

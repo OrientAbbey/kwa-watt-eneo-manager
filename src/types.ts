@@ -14,6 +14,10 @@ export interface Recharge {
   kwh: number;
   /** Référence de transaction du SMS de confirmation (ex. BPJJMMAA…), utile pour toute réclamation. */
   transactionRef?: string;
+  /** Numéro de reçu ENEO (SMS MTN), utile pour une réclamation. */
+  receiptNo?: string;
+  /** Frais du prestataire de paiement (FCFA) : NON inclus dans `montant` (qui est l'énergie achetée). */
+  fees?: number;
   /** Comment la recharge a été saisie. */
   source?: "manual" | "sms";
   updatedAt?: number;

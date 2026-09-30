@@ -61,14 +61,15 @@ const fixDigits = (s: string) => s.replace(/[OoIl|]/g, (c) => (c === "O" || c ==
 
 /**
  * Une capture « numérique » est plausible si elle contient au moins un quart de vrais chiffres (« 3OOO » = 3000 lu par
- * un OCR), ou, sans aucun chiffre, une suite de « O » éventuellement précédée d'un « I/l » (« IOOO » = 1000).
- * Un mot comme « lol » (→ 101) est rejeté.
+ * un OCR), ou, sans aucun chiffre, une suite de « O » (zéros) éventuellement précédée d'un « I/l » (« IOOO » = 1000).
+ * Un mot comme « lol » (→ 101) ou « lo » est rejeté.
  */
 const mostlyDigits = (s: string) => {
   const compact = s.replace(/[\s.,-]/g, "");
   if (compact.length === 0) return false;
   const digits = compact.match(/\d/g)?.length ?? 0;
-  if (digits === 0) return /^[Il|]?[Oo]{2,}$/.test(compact);
+  // Sans aucun chiffre : « O » / « OO » (zéros), ou « IOOO » (1000). Pas « lo » ni « lol ».
+  if (digits === 0) return /^[Oo]+$/.test(compact) || /^[Il|][Oo]{2,}$/.test(compact);
   return digits / compact.length >= 0.25;
 };
 

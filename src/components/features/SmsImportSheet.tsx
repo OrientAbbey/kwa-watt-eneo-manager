@@ -1,11 +1,14 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Camera, ClipboardPaste, Loader2, ScanText } from "lucide-react";
+import { AlertTriangle, Camera, CheckCircle2, ClipboardPaste, Loader2, ScanText } from "lucide-react";
 import BottomSheet from "../ui/BottomSheet";
-import { ParsedSms, parseRechargeSms, parsedFieldCount } from "../../lib/smsParser";
+import { ParsedSms, parseRechargeSms, parsedFieldCount, findMeterByNumber } from "../../lib/smsParser";
+import { checkUnitPrice } from "../../lib/eneo";
+import { MONETARY_UNIT } from "../../lib/utils";
 import { recognizeText } from "../../lib/ocr";
 import { useImagePicker } from "../../hooks/useImagePicker";
 import { useApp } from "../../store/AppContext";
 import { copyText } from "../../lib/clipboard";
+import type { MeterData } from "../../types";
 
 interface SmsImportSheetProps {
   open: boolean;
@@ -19,7 +22,7 @@ interface SmsImportSheetProps {
  * Le paiement a pu être fait depuis un autre téléphone (agent, proche) : aucune permission SMS n'est requise.
  */
 export default function SmsImportSheet({ open, onClose, onParsed }: SmsImportSheetProps) {
-  const { showToast } = useApp();
+  const { state, currentMeter, switchMeter, updateProfile, showToast } = useApp();
   const [text, setText] = useState("");
   const [ocrBusy, setOcrBusy] = useState(false);
   const [ocrStatus, setOcrStatus] = useState("");
@@ -34,6 +37,20 @@ export default function SmsImportSheet({ open, onClose, onParsed }: SmsImportShe
 
   const parsed = useMemo(() => parseRechargeSms(text), [text]);
   const found = parsedFieldCount(parsed);
+
+  // Le SMS concerne-t-il le compteur actif ? (garde-fou contre une mauvaise lecture OCR ou un SMS d'un autre compteur)
+  const meterMatch: MeterData | undefined = findMeterByNumber<MeterData>(state.meters, parsed.meterNumber);
+  const meterState: "none" | "current" | "other" | "unknown_empty" | "unknown" = !parsed.meterNumber
+    ? "none"
+    : meterMatch
+      ? meterMatch.id === currentMeter.id ? "current" : "other"
+      : currentMeter.profile.meterNumber.trim() === "" ? "unknown_empty" : "unknown";
+
+  // Rapport montant / kWh cohérent avec la grille ? (« Dette » retenue = prix apparent plus élevé : on ne juge pas)
+  const priceCheck =
+    parsed.montant !== undefined && parsed.kwh !== undefined && !(parsed.dette && parsed.dette > 0)
+      ? checkUnitPrice(parsed.montant, parsed.kwh, state.settings.tariffs)
+      : null;
 
   const { openPicker, picker } = useImagePicker(
     async (image) => {
@@ -77,11 +94,15 @@ export default function SmsImportSheet({ open, onClose, onParsed }: SmsImportShe
     }
   };
 
+  const fmt = (n?: number) => (n !== undefined ? `${n.toLocaleString("fr-FR")} ${MONETARY_UNIT}` : undefined);
   const summary: [string, string | undefined][] = [
-    ["Montant", parsed.montant !== undefined ? parsed.montant.toLocaleString("fr-FR") : undefined],
+    ["Montant (énergie)", fmt(parsed.montant)],
     ["Énergie", parsed.kwh !== undefined ? `${parsed.kwh} kWh` : undefined],
-    ["Date", parsed.date],
+    ["Date", parsed.date ? `${parsed.date}${parsed.dateSource === "reference" ? " (déduite de la référence)" : ""}` : undefined],
     ["Référence", parsed.transactionRef],
+    ["Reçu n°", parsed.receiptNo],
+    ["Compteur", parsed.meterNumber],
+    ["Frais (non inclus)", fmt(parsed.fees)],
   ];
 
   return (
@@ -117,7 +138,7 @@ export default function SmsImportSheet({ open, onClose, onParsed }: SmsImportShe
 
         {text.trim() && (
           <div className="rounded-xl border border-slate-100 dark:border-slate-700 p-3">
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1.5"><ScanText size={14} /> Valeurs reconnues ({found}/4)</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1.5"><ScanText size={14} /> Valeurs reconnues</p>
             <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-sm">
               {summary.map(([k, v]) => (
                 <React.Fragment key={k}>
@@ -126,6 +147,34 @@ export default function SmsImportSheet({ open, onClose, onParsed }: SmsImportShe
                 </React.Fragment>
               ))}
             </dl>
+            {meterState === "current" && (
+              <p className="mt-3 text-xs text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5"><CheckCircle2 size={14} /> Compteur reconnu : {currentMeter.name}</p>
+            )}
+            {meterState === "other" && meterMatch && (
+              <div className="mt-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 p-3 text-xs text-amber-900 dark:text-amber-200">
+                <p className="flex items-start gap-1.5"><AlertTriangle size={14} className="shrink-0 mt-0.5" /> Ce SMS concerne le compteur « {meterMatch.name} », pas « {currentMeter.name} ».</p>
+                <button onClick={() => { switchMeter(meterMatch.id); showToast(`Compteur actif : ${meterMatch.name}`, "info"); }} className="mt-2 font-semibold underline">Basculer sur « {meterMatch.name} »</button>
+              </div>
+            )}
+            {meterState === "unknown_empty" && (
+              <div className="mt-3 rounded-lg bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900 p-3 text-xs text-indigo-900 dark:text-indigo-200">
+                <p>« {currentMeter.name} » n'a pas encore de numéro de compteur.</p>
+                <button onClick={() => { updateProfile({ meterNumber: parsed.meterNumber! }); showToast("Numéro de compteur enregistré", "success"); }} className="mt-2 font-semibold underline">Enregistrer {parsed.meterNumber} sur ce compteur</button>
+              </div>
+            )}
+            {meterState === "unknown" && (
+              <p className="mt-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 p-3 text-xs text-amber-900 dark:text-amber-200 flex items-start gap-1.5">
+                <AlertTriangle size={14} className="shrink-0 mt-0.5" /> Le numéro lu ({parsed.meterNumber}) ne correspond à aucun de vos compteurs : vérifiez la lecture (chiffre mal reconnu ?) ou le compteur concerné.
+              </p>
+            )}
+            {priceCheck && priceCheck.status !== "ok" && (
+              <p className="mt-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 p-3 text-xs text-amber-900 dark:text-amber-200 flex items-start gap-1.5">
+                <AlertTriangle size={14} className="shrink-0 mt-0.5" />
+                {priceCheck.status === "too_many_kwh"
+                  ? `${Math.round(priceCheck.unitPrice)} ${MONETARY_UNIT}/kWh est plus bas que tout tarif : un chiffre en trop sur les kWh, ou en moins sur le montant ?`
+                  : `${Math.round(priceCheck.unitPrice)} ${MONETARY_UNIT}/kWh est plus haut que tout tarif : un chiffre manquant sur les kWh, ou en trop sur le montant ?`}
+              </p>
+            )}
             {parsed.token && (
               <button
                 onClick={async () => showToast((await copyText(parsed.token!)) ? "Jeton copié : saisissez-le sur le compteur" : "Copie impossible", "info")}

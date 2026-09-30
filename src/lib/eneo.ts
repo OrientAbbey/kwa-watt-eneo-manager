@@ -180,3 +180,30 @@ export function calculateKwh(
   
   return { value: finalKwh, descriptionLines: lines };
 }
+
+/**
+ * Bornes de prix unitaire plausibles (FCFA/kWh) : du tarif le plus bas au plus haut, TVA comprise, avec une marge.
+ * Sert à repérer une erreur de lecture OCR ou de saisie (un chiffre en trop ou manquant sur les kWh ou le montant).
+ */
+export function unitPriceBounds(tariffs: Record<"residential" | "professional", TariffRange[]> = TARIFFS): { min: number; max: number } {
+  const prices = [...tariffs.residential, ...tariffs.professional]
+    .flatMap((r) => [r.base, r.comfort])
+    .filter((p) => Number.isFinite(p) && p > 0);
+  if (prices.length === 0) return { min: 0, max: Infinity };
+  return { min: Math.min(...prices) * 0.9, max: Math.max(...prices) * (1 + TVA_RATE) * 1.1 };
+}
+
+export type UnitPriceCheck = { status: "ok" | "too_many_kwh" | "too_few_kwh"; unitPrice: number };
+
+/** Le rapport montant / kWh est-il compatible avec la grille tarifaire ? (« too_many_kwh » = prix unitaire trop bas.) */
+export function checkUnitPrice(
+  montant: number,
+  kwh: number,
+  tariffs: Record<"residential" | "professional", TariffRange[]> = TARIFFS
+): UnitPriceCheck {
+  const unitPrice = kwh > 0 ? montant / kwh : Infinity;
+  const { min, max } = unitPriceBounds(tariffs);
+  if (unitPrice < min) return { status: "too_many_kwh", unitPrice };
+  if (unitPrice > max) return { status: "too_few_kwh", unitPrice };
+  return { status: "ok", unitPrice };
+}

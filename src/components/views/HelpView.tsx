@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useApp } from '../../store/AppContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { HelpCircle, Calculator, Zap, Database, Image as ImageIcon, Trash2, Plus, Phone, Mail } from 'lucide-react';
@@ -9,10 +9,23 @@ import UsefulLinksCard from '../features/UsefulLinksCard';
 import { useRemoteConfig } from '../../store/RemoteConfigContext';
 import ExternalLink from '../ui/ExternalLink';
 import { MONETARY_UNIT } from '../../lib/utils';
+import { OCR_ENGINE_INFO } from '../../lib/ocr';
+import { useNav } from '../../store/NavContext';
 
 export default function HelpView() {
   const { state, updateHelpImages } = useApp();
   const { config, brand, brandName } = useRemoteConfig();
+  const { consumeIntent } = useNav();
+
+  // Arrivée depuis un raccourci (ex. « Guides et liens utiles » de l'onglet Services) : défiler jusqu'à la section
+  useEffect(() => {
+    const intent = consumeIntent();
+    if (intent?.type === 'focus') {
+      const t = setTimeout(() => document.getElementById(intent.section)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 120);
+      return () => clearTimeout(t);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [fullScreenImage, setFullScreenImage] = React.useState<string | null>(null);
 
   const { openPicker, picker } = useImagePicker(
@@ -59,8 +72,9 @@ export default function HelpView() {
             <li><strong>Dashboard Complet :</strong> Vue rapide sur le solde d'énergie estimé, consommation actuelle, prévision des jours restants avant coupure et graphiques.</li>
             <li><strong>Historique (Consommations / Recharges) :</strong> Suivi précis de chaque mois de consommation et achats de crédits en {MONETARY_UNIT}, avec export CSV/JSON et import.</li>
             <li><strong>Calculatrice Intégrée :</strong> Estimations bidirectionnelles "Montant vers kWh" et "kWh vers Montant", avec ajustements rapides des valeurs.</li>
-            <li><strong>Onglet Services :</strong> raccourcis de recharge (MTN / Orange), crédit d'urgence 811 suivi comme un prêt à rembourser, codes du clavier du compteur, diagnostic de la mise à jour TID, accès aux factures par SMS/WhatsApp et annonces de coupures.</li>
-            <li><strong>Recharge depuis un SMS :</strong> collez ou photographiez le SMS de confirmation (même reçu sur un autre téléphone) : montant, date et référence de transaction sont pré-remplis. Achat minimum : {config.minRechargeAmount.toLocaleString('fr-FR')} {MONETARY_UNIT}.</li>
+            <li><strong>Onglet Services :</strong> recharge par MTN MoMo ou Orange Money avec le code de paiement déjà rempli (compteur + montant, frais estimés), crédit d'urgence 811 suivi comme un prêt à rembourser, codes du clavier du compteur, diagnostic de la mise à jour TID, accès aux factures par SMS/WhatsApp et annonces de coupures.</li>
+            <li><strong>Recharge depuis un SMS :</strong> collez le SMS de confirmation (Orange Money ou MTN MoMo, même reçu sur un autre téléphone) : montant, kWh, date, référence de transaction, n° de reçu, compteur et frais sont pré-remplis. Le montant enregistré est celui de l'énergie ; les frais de paiement sont notés à part. Achat minimum : {config.minRechargeAmount.toLocaleString('fr-FR')} {MONETARY_UNIT}. Le jeton à 20 chiffres, le nom et le téléphone du payeur ne sont jamais enregistrés. Un contrôle vous avertit si le compteur du SMS n'est pas le vôtre ou si le rapport montant/kWh est incohérent avec les tarifs.</li>
+            <li><strong>Lecture d'une photo ou capture (OCR) :</strong> moteur <strong>{OCR_ENGINE_INFO.engine}</strong>, modèle {OCR_ENGINE_INFO.model}, exécuté {OCR_ENGINE_INFO.offline ? 'hors ligne ' : ''}sur votre téléphone ({OCR_ENGINE_INFO.runtime}) : {OCR_ENGINE_INFO.payload}. Aucune image n'est envoyée sur internet. Relisez toujours les chiffres reconnus avant d'enregistrer.</li>
             <li><strong>Rappels de recharge :</strong> une notification vous prévient quelques jours avant la fin estimée de votre crédit, même si l'application est fermée.</li>
             <li><strong>Profil Utilisateur Complet :</strong> Enregistrement du numéro de compteur, photos de l'écran, photo recto-verso de la carte d'accès.</li>
             <li><strong>Synchronisation Cloud :</strong> Connectez-vous avec Google pour sauvegarder automatiquement toutes vos données et vos photos dans le cloud de manière sécurisée.</li>

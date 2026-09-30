@@ -17,7 +17,7 @@ import { useNav } from '../../store/NavContext';
 import SmsImportSheet from '../features/SmsImportSheet';
 import CopyableValue from '../ui/CopyableValue';
 import { ParsedSms } from '../../lib/smsParser';
-import { calculateAverageConsumption, calculateKwh } from '../../lib/eneo';
+import { calculateAverageConsumption, calculateKwh, checkUnitPrice } from '../../lib/eneo';
 import { outstandingEmergencyKwh } from '../../lib/energy';
 
 interface EditableRow {
@@ -26,6 +26,8 @@ interface EditableRow {
   kwh?: number;
   montant?: number;
   transactionRef?: string;
+  receiptNo?: string;
+  fees?: number;
 }
 
 interface HistoryRowProps {
@@ -68,6 +70,8 @@ export default function HistoryView() {
   const [val1, setVal1] = useState(''); // kwh or montant
   const [val2, setVal2] = useState(''); // -   or kwh
   const [txRef, setTxRef] = useState('');
+  const [receiptNo, setReceiptNo] = useState('');
+  const [fees, setFees] = useState('');
   const [smsOpen, setSmsOpen] = useState(false);
   const [fromSms, setFromSms] = useState(false);
   const [kwhEstimated, setKwhEstimated] = useState(false);
@@ -83,6 +87,8 @@ export default function HistoryView() {
     setVal1('');
     setVal2('');
     setTxRef('');
+    setReceiptNo('');
+    setFees('');
     setFromSms(false);
     setKwhEstimated(false);
     setIsAdding(true);
@@ -105,6 +111,8 @@ export default function HistoryView() {
     if (parsed.montant !== undefined) setVal1(String(parsed.montant));
     if (parsed.kwh !== undefined) setVal2(String(parsed.kwh));
     if (parsed.transactionRef) setTxRef(parsed.transactionRef);
+    if (parsed.receiptNo) setReceiptNo(parsed.receiptNo);
+    if (parsed.fees !== undefined) setFees(String(parsed.fees));
   };
 
   const currentMonth = format(new Date(), 'yyyy-MM');
@@ -150,13 +158,16 @@ export default function HistoryView() {
         return showToast(`Achat minimum : ${minAmount.toLocaleString('fr-FR')} ${MONETARY_UNIT}`, 'error');
       }
       const ref = txRef.trim() || undefined;
+      const receipt = receiptNo.trim() || undefined;
+      const feesValue = fees.trim() === '' ? undefined : Math.max(0, parseFloat(fees));
+      if (feesValue !== undefined && isNaN(feesValue)) return showToast('Frais invalides', 'error');
       if (editingId) {
         const { value } = await Dialog.confirm({ title: 'Confirmation', message: "Voulez-vous modifier cette entrée ?" });
         if (!value) return;
-        updateRecharge({ ...(original || {}), id: editingId, date: dateStr, montant, kwh, transactionRef: ref });
+        updateRecharge({ ...(original || {}), id: editingId, date: dateStr, montant, kwh, transactionRef: ref, receiptNo: receipt, fees: feesValue });
         showToast("Entrée modifiée");
       } else {
-        const result = addRecharge({ id: uuidv4(), date: dateStr, montant, kwh, transactionRef: ref, source: fromSms ? 'sms' : 'manual' });
+        const result = addRecharge({ id: uuidv4(), date: dateStr, montant, kwh, transactionRef: ref, receiptNo: receipt, fees: feesValue, source: fromSms ? 'sms' : 'manual' });
         if (result === 'duplicate') return showToast('Cette recharge est déjà enregistrée (même date, montant et référence).', 'error');
         showToast(debtKwh > 0 ? `Recharge ajoutée — ${debtKwh} kWh de crédit d'urgence déduits` : "Entrée ajoutée");
       }
@@ -166,6 +177,8 @@ export default function HistoryView() {
     setVal1('');
     setVal2('');
     setTxRef('');
+    setReceiptNo('');
+    setFees('');
     setFromSms(false);
     setKwhEstimated(false);
   };
@@ -179,6 +192,8 @@ export default function HistoryView() {
       setVal1(item.montant.toString());
       setVal2(item.kwh.toString());
       setTxRef(item.transactionRef || '');
+      setReceiptNo(item.receiptNo || '');
+      setFees(item.fees !== undefined ? String(item.fees) : '');
     }
     setFromSms(false);
     setKwhEstimated(false);
@@ -361,6 +376,27 @@ export default function HistoryView() {
                     <input type="text" value={txRef} onChange={e => setTxRef(e.target.value)} maxLength={60} className="w-full text-sm p-3 border border-slate-200 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 font-mono" placeholder="Figure dans le SMS de confirmation" />
                     <p className="text-[11px] text-slate-400 mt-1">Utile en cas de réclamation auprès de l'opérateur ou de l'agent de paiement.</p>
                   </div>
+                  <details className="text-xs text-slate-500 dark:text-slate-400" open={!!receiptNo || !!fees}>
+                    <summary className="cursor-pointer select-none">Autres détails du paiement (facultatif)</summary>
+                    <div className="grid grid-cols-2 gap-3 mt-2">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">N° de reçu</label>
+                        <input type="text" value={receiptNo} onChange={e => setReceiptNo(e.target.value)} maxLength={30} className="w-full text-sm p-2.5 border border-slate-200 dark:border-slate-600 rounded-lg outline-none bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 font-mono" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Frais de paiement ({MONETARY_UNIT})</label>
+                        <input type="number" inputMode="numeric" min={0} value={fees} onChange={e => setFees(e.target.value)} className="w-full text-sm p-2.5 border border-slate-200 dark:border-slate-600 rounded-lg outline-none bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100" placeholder="ex: 100" />
+                      </div>
+                    </div>
+                    <p className="text-[11px] mt-1">Les frais ne sont pas inclus dans le montant ci-dessus (qui correspond à l'énergie achetée).</p>
+                  </details>
+                  {(() => {
+                    const m = parseFloat(val1), k = parseFloat(val2);
+                    if (!(m > 0) || !(k > 0)) return null;
+                    const c = checkUnitPrice(m, k, state.settings.tariffs);
+                    if (c.status === 'ok') return null;
+                    return <p className="text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/30 rounded-lg p-2 flex items-start gap-1.5"><AlertTriangle size={12} className="shrink-0 mt-0.5" /> {Math.round(c.unitPrice)} {MONETARY_UNIT}/kWh ne correspond à aucun tarif : vérifiez le montant et les kWh.</p>;
+                  })()}
                   {debtKwh > 0 && !editingId && (
                     <p className="text-xs text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-950/30 rounded-lg p-2">{debtKwh} kWh de crédit d'urgence (811) seront déduits de cette recharge.</p>
                   )}
@@ -401,7 +437,11 @@ export default function HistoryView() {
               <HistoryRow
                 title={format(parseISO(r.date), 'dd MMM yyyy', { locale: fr })}
                 subtitle={`${r.montant.toLocaleString()} ${MONETARY_UNIT} • ${r.kwh.toFixed(1)} kWh`}
-                extra={r.transactionRef ? <div className="text-xs text-slate-400 mt-0.5 flex items-center gap-1" onClick={e => e.stopPropagation()}>Réf. <CopyableValue value={r.transactionRef} label="Référence" className="text-xs" /></div> : undefined}
+                extra={(r.transactionRef || r.receiptNo || r.fees) ? <div className="text-xs text-slate-400 mt-0.5 flex items-center gap-x-3 gap-y-0.5 flex-wrap" onClick={e => e.stopPropagation()}>
+                  {r.transactionRef && <span className="flex items-center gap-1">Réf. <CopyableValue value={r.transactionRef} label="Référence" className="text-xs" /></span>}
+                  {r.receiptNo && <span className="flex items-center gap-1">Reçu n° <CopyableValue value={r.receiptNo} label="N° de reçu" className="text-xs" /></span>}
+                  {!!r.fees && <span>Frais {r.fees.toLocaleString()} {MONETARY_UNIT}</span>}
+                </div> : undefined}
                 onEdit={() => handleEdit(r)}
                 onDelete={async () => {
                   const { value } = await Dialog.confirm({ title: 'Confirmation', message: "Voulez-vous supprimer cette recharge ?" });

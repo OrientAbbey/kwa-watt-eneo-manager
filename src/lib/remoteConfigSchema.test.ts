@@ -27,9 +27,9 @@ describe("sanitizeRemoteConfig", () => {
   });
 
   it("n'accepte que des codes USSD sûrs", () => {
-    const cfg = sanitizeRemoteConfig({ ussd: { mtnMenu: "*126#", orangeRecharge: "<script>" } });
+    const cfg = sanitizeRemoteConfig({ ussd: { mtnMenu: "*126#", orangeMenu: "<script>" } });
     expect(cfg.ussd.mtnMenu).toBe("*126#");
-    expect(cfg.ussd.orangeRecharge).toBe(DEFAULT_REMOTE_CONFIG.ussd.orangeRecharge);
+    expect(cfg.ussd.orangeMenu).toBe(DEFAULT_REMOTE_CONFIG.ussd.orangeMenu);
   });
 
   it("applique le montant minimum distant s'il est valide", () => {
@@ -47,5 +47,28 @@ describe("sanitizeRemoteConfig", () => {
   it("conserve la grille tarifaire distante versionnée", () => {
     const cfg = sanitizeRemoteConfig({ tariffs: { version: 3, values: { residential: [] } } });
     expect(cfg.tariffs?.version).toBe(3);
+  });
+
+  it("fournit les codes USSD officiels par défaut (MTN et Orange)", () => {
+    const u = DEFAULT_REMOTE_CONFIG.ussd;
+    expect(u.mtnMenu).toBe("*126*21#");
+    expect(u.mtnPay).toBe("*126*2*1*2*{meter}*{amount}#");
+    expect(u.orangeMenu).toBe("#150*314#");
+    expect(u.orangePay).toBe("#150*3*1*4*1*{meter}*{amount}#");
+  });
+
+  it("n'accepte un modèle de paiement que s'il contient un {meter} et un {amount} sûrs", () => {
+    const d = DEFAULT_REMOTE_CONFIG.ussd;
+    const ok = sanitizeRemoteConfig({ ussd: { mtnPay: "*126*9*{meter}*{amount}#" } });
+    expect(ok.ussd.mtnPay).toBe("*126*9*{meter}*{amount}#");
+    for (const bad of ["*126*{meter}#", "*126*{amount}#", "*126*{meter}*{meter}*{amount}#", "*126*{meter}*{amount}", "*126*{meter}*{amount};rm#", "tel:{meter}{amount}#", "*126*{meter}*{amount}*{x}#"]) {
+      expect(sanitizeRemoteConfig({ ussd: { mtnPay: bad } }).ussd.mtnPay).toBe(d.mtnPay);
+    }
+  });
+
+  it("inclut les liens MTN demandés (paiement ENEO prépayé et frais)", () => {
+    const urls = DEFAULT_REMOTE_CONFIG.links.map((l) => l.url);
+    expect(urls).toContain("https://mtn.cm/fr/helppersonal/eneo-prepaid-bill-payment/");
+    expect(urls).toContain("https://mtn.cm/fr/helppersonal/bill-payment-fees/");
   });
 });

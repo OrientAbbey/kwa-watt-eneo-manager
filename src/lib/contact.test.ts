@@ -20,3 +20,34 @@ describe("liens d'action", () => {
     expect(invoiceRequestText()).toBe("");
   });
 });
+
+import { buildUssdPayment } from "./contact";
+
+describe("buildUssdPayment", () => {
+  const MTN = "*126*2*1*2*{meter}*{amount}#";
+  const ORANGE = "#150*3*1*4*1*{meter}*{amount}#";
+  it("construit les codes globaux MTN et Orange indiqués", () => {
+    expect(buildUssdPayment(MTN, "01234567852", 3000)).toBe("*126*2*1*2*01234567852*3000#");
+    expect(buildUssdPayment(ORANGE, "98765432109", 2000)).toBe("#150*3*1*4*1*98765432109*2000#");
+  });
+  it("donne un lien tel: valide (le # est encodé)", () => {
+    expect(telHref(buildUssdPayment(MTN, "01234567852", 3000)!)).toBe("tel:*126*2*1*2*01234567852*3000%23");
+    expect(telHref(buildUssdPayment(ORANGE, "98765432109", 2000)!)).toBe("tel:%23150*3*1*4*1*98765432109*2000%23");
+  });
+  it("tolère des espaces ou tirets dans le numéro de compteur saisi", () => {
+    expect(buildUssdPayment(MTN, "0123 4567 852", 1000)).toBe("*126*2*1*2*01234567852*1000#");
+    expect(buildUssdPayment(MTN, "0123-4567-852", 1000)).toBe("*126*2*1*2*01234567852*1000#");
+  });
+  it("refuse tout ce qui pourrait altérer le code composé", () => {
+    expect(buildUssdPayment(MTN, "0123*4567#852", 3000)).toBeNull();
+    expect(buildUssdPayment(MTN, "01234567852", 3000.5)).toBeNull();
+    expect(buildUssdPayment(MTN, "01234567852", -1)).toBeNull();
+    expect(buildUssdPayment(MTN, "01234567852", 0)).toBeNull();
+    expect(buildUssdPayment(MTN, "abc", 3000)).toBeNull();
+    expect(buildUssdPayment(MTN, "1234", 3000)).toBeNull();
+    expect(buildUssdPayment(MTN, "01234567852", NaN)).toBeNull();
+  });
+  it("refuse un modèle sans les deux champs", () => {
+    expect(buildUssdPayment("*126#", "01234567852", 3000)).toBeNull();
+  });
+});

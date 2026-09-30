@@ -83,3 +83,27 @@ describe("getTariffRange — moyennes fractionnaires", () => {
     expect(getTariffRange(5000, "residential").min).toBe(801);
   });
 });
+
+import { checkUnitPrice, unitPriceBounds } from './eneo';
+
+describe('checkUnitPrice — détection des erreurs de chiffres', () => {
+  it('accepte les recharges réelles (SMS Orange 3000 F → 38 kWh, MTN 2000 F → 40 kWh)', () => {
+    expect(checkUnitPrice(3000, 38).status).toBe('ok');
+    expect(checkUnitPrice(2000, 40).status).toBe('ok');
+  });
+  it('repère un chiffre en trop sur les kWh (380 au lieu de 38)', () => {
+    expect(checkUnitPrice(3000, 380).status).toBe('too_many_kwh');
+  });
+  it('repère un chiffre manquant sur les kWh (3.8 au lieu de 38)', () => {
+    expect(checkUnitPrice(3000, 3.8).status).toBe('too_few_kwh');
+  });
+  it('gère des kWh nuls sans planter', () => {
+    expect(checkUnitPrice(1000, 0).status).toBe('too_few_kwh');
+  });
+  it('a des bornes cohérentes avec la grille (≈ 45 à ≈ 130 FCFA/kWh)', () => {
+    const b = unitPriceBounds();
+    expect(b.min).toBeCloseTo(45, 0);
+    expect(b.max).toBeGreaterThan(125);
+    expect(b.max).toBeLessThan(135);
+  });
+});

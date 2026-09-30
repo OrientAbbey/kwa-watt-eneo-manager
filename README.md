@@ -69,6 +69,12 @@ y compris récupérer une clé d'administrateur Firebase, dans [`docs/CONFIG_A_D
 Voir [`docs/SIGNATURE_DEBUG.md`](./docs/SIGNATURE_DEBUG.md) — la clé de signature debug n'est plus committée
 dans le dépôt et doit être fournie via le secret GitHub `DEBUG_KEYSTORE_B64`.
 
+## OCR, logo
+
+- Lecture de photos/captures de SMS : Tesseract.js **embarqué et hors ligne** ; comparatif mesuré avec PaddleOCR et
+  EasyOCR dans [`docs/OCR_COMPARATIF.md`](./docs/OCR_COMPARATIF.md) (banc d'essai reproductible dans `docs/ocr-benchmark/`).
+- Logo (remplace celui de Flet) et pistes alternatives : [`docs/LOGO.md`](./docs/LOGO.md).
+
 ## Synchronisation cloud
 
 Voir [`docs/SYNC_ET_REGLES.md`](./docs/SYNC_ET_REGLES.md) — modèle de données, fusion multi-appareils, et

@@ -1,4 +1,4 @@
-// Régénère les fichiers d'icône/splash de public/ à partir des SVG de ce dossier.
+// Régénère les fichiers d'icône de public/ à partir des SVG de ce dossier (le splash est vectoriel : voir gen_android_vectors.py).
 // Usage (depuis la racine du dépôt) :  npm i --no-save sharp && node docs/logo/export.cjs
 // Puis :  npx @capacitor/assets generate --android --assetPath public   (fait aussi par la CI à chaque build)
 const sharp = require("sharp");
@@ -11,7 +11,5 @@ const out = path.join(here, "..", "..", "public");
   await r("B_icon.svg", 1024, "icon-only.png");
   await r("B_foreground.svg", 1024, "icon-foreground.png");
   await r("B_background.svg", 1024, "icon-background.png");
-  await r("B_splash.svg", 2732, "splash.png");
-  await r("B_splash.svg", 2732, "splash-dark.png");
-  console.log("Icône et splash régénérés dans public/");
+  console.log("Icônes régénérées dans public/");
 })();

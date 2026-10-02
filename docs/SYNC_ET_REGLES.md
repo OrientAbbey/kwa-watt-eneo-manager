@@ -33,3 +33,15 @@ firebase deploy --only firestore:rules,storage:rules
 à jour), quota gratuit atteint, document trop volumineux, ou réseau indisponible. Dans tous les cas, les données
 restent sauvegardées localement (`localStorage`) : rien n'est jamais perdu, seule la synchronisation est
 retardée. Un nouvel essai automatique est programmé (backoff exponentiel, 30 s à 5 min).
+
+## Photos : règles à déployer
+
+Les photos sont dans la sous-collection `user_data/{uid}/photos`, qui n'est autorisée que par la **nouvelle** version de
+`firestore.rules`. Tant que les règles ne sont pas déployées (`firebase deploy --only firestore:rules`), la synchro des
+**données** fonctionne mais celle des **photos** est refusée (« permission-denied ») : l'application suspend alors la
+synchro des photos pour la session, affiche un seul message par jour et un avertissement permanent dans la fenêtre
+« Synchronisation » (icône nuage). Les photos restent enregistrées sur le téléphone. « Synchroniser maintenant » relance
+un essai complet.
+
+Stockage local : les données et les photos sont enregistrées dans **deux clés** du `localStorage` (`…_photos` pour les
+photos), si bien qu'un manque de place dû aux photos n'empêche jamais d'enregistrer une recharge ou un relevé.

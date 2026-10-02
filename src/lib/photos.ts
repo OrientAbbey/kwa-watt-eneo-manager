@@ -77,3 +77,82 @@ export function fillMissingPhotos(target: AppState, source: AppState): AppState 
   const help = target.helpImages.length === 0 && source.helpImages.length > 0 ? source.helpImages : target.helpImages;
   return { ...target, meters, helpImages: help };
 }
+
+// ───────────────────────── Planification de la synchro des photos (pure, testée) ─────────────────────────
+
+export type PhotoManifest = Record<string, { h: string; t: number }>;
+export interface RemotePhoto {
+  data: string;
+  t: number;
+}
+
+export interface PhotoSyncPlan {
+  /** Photos à adopter depuis le cloud (nouvelles ou plus récentes ailleurs). */
+  take: Record<string, string>;
+  /** Photos supprimées sur un autre appareil : à retirer d'ici. */
+  removeLocal: string[];
+  /** Photos locales (nouvelles ou modifiées) à envoyer. */
+  upload: string[];
+  /** Photos supprimées ici : à retirer du cloud. */
+  deleteRemote: string[];
+  /** Photos déjà identiques des deux côtés : on ne fait que mémoriser leur état. */
+  record: string[];
+}
+
+/**
+ * Décide, photo par photo, quoi télécharger / envoyer / supprimer. Le manifeste (état connu à la dernière synchro de CET
+ * appareil) permet de distinguer « supprimée ici » (ne pas la re-télécharger) de « nouvelle ailleurs » (à télécharger).
+ * `remote = null` : synchro « légère » sans listing du cloud (on ne traite que ce qui vient de cet appareil).
+ */
+export function planPhotoSync(args: {
+  local: Record<string, string>;
+  remote: Record<string, RemotePhoto> | null;
+  manifest: PhotoManifest;
+  /**
+   * Faux quand des photos ont pu être perdues localement par un échec d'écriture (stockage plein) : une photo absente
+   * ici n'est alors PAS une suppression volontaire — on la restaure depuis le cloud au lieu de l'y effacer.
+   */
+  trustLocalDeletions?: boolean;
+}): PhotoSyncPlan {
+  const { local, remote, manifest } = args;
+  const trust = args.trustLocalDeletions ?? true;
+  const plan: PhotoSyncPlan = { take: {}, removeLocal: [], upload: [], deleteRemote: [], record: [] };
+
+  for (const [key, data] of Object.entries(local)) {
+    const known = manifest[key];
+    const h = hashString(data);
+    const r = remote?.[key];
+    if (r) {
+      const remoteChanged = !known || r.t > known.t;
+      const localChanged = !known || known.h !== h;
+      if (hashString(r.data) === h) plan.record.push(key); // identiques
+      else if (known && !localChanged && remoteChanged) plan.take[key] = r.data; // modifiée ailleurs seulement
+      else plan.upload.push(key); // modifiée ici (ou conflit : cet appareil gagne)
+    } else if (remote && known) {
+      // Connue de nous, absente du cloud : supprimée ailleurs. Si on l'a modifiée depuis, on la renvoie.
+      if (known.h === h) plan.removeLocal.push(key);
+      else plan.upload.push(key);
+    } else if (!known || known.h !== h) {
+      plan.upload.push(key); // nouvelle ou modifiée ici
+    }
+  }
+
+  // Photos connues de nous mais retirées d'ici : suppression locale volontaire
+  for (const key of trust ? Object.keys(manifest) : []) {
+    if (key in local) continue;
+    const r = remote?.[key];
+    if (remote === null) plan.deleteRemote.push(key);
+    else if (!r) plan.record.push(key); // déjà absente du cloud : on oublie simplement
+    else if (r.t > manifest[key].t) plan.take[key] = r.data; // modifiée ailleurs après notre dernière synchro : on la garde
+    else plan.deleteRemote.push(key);
+  }
+
+  // Photos présentes seulement dans le cloud (jamais vues ici) : nouvelles depuis un autre appareil
+  if (remote) {
+    for (const [key, r] of Object.entries(remote)) {
+      if (key in local || (trust && key in manifest)) continue;
+      plan.take[key] = r.data;
+    }
+  }
+  return plan;
+}

@@ -1,14 +1,17 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useApp } from '../../store/AppContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { Settings as SettingsIcon, Save, RefreshCcw, Bell } from 'lucide-react';
 import { DEFAULT_SETTINGS, DEFAULT_ALERTS } from '../../constants';
 import { MONETARY_UNIT } from '../../lib/utils';
 import { Dialog } from '@capacitor/dialog';
-import { notificationsSupported, requestNotificationPermission } from '../../lib/notifications';
+import { NotificationPermissionState, getNotificationPermissionState, notificationsSupported, requestNotificationPermission, sendTestNotification } from '../../lib/notifications';
 
 export default function SettingsView() {
   const { state, updateSettings, resetData, showToast } = useApp();
+  const [permission, setPermission] = useState<NotificationPermissionState>('prompt');
+  const [testing, setTesting] = useState(false);
+  useEffect(() => { getNotificationPermissionState().then(setPermission); }, []);
   const [clientType, setClientType] = useState(state.settings.clientType);
   const [tva, setTva] = useState(state.settings.tva.toString());
   
@@ -338,21 +341,48 @@ export default function SettingsView() {
                 const checked = e.target.checked;
                 if (checked) {
                   if (!notificationsSupported()) {
-                    showToast('Notifications non supportées sur cet appareil.');
+                    showToast('Notifications non supportées sur cet appareil.', 'error');
                     return;
                   }
                   const granted = await requestNotificationPermission();
-                  if (granted) {
-                    setAlerts(s => ({...s, enableNotifications: true}));
-                  } else {
-                    showToast('Permission refusée.');
+                  setPermission(await getNotificationPermissionState());
+                  if (!granted) {
+                    showToast("Autorisation refusée : activez les notifications de KWA-WATT dans les réglages du téléphone (Applications → KWA-WATT → Notifications).", 'error');
+                    return;
                   }
-                } else {
-                  setAlerts(s => ({...s, enableNotifications: false}));
                 }
+                // Appliqué IMMÉDIATEMENT (avant, il fallait penser à « Enregistrer » : sinon les notifications restaient désactivées)
+                setAlerts(s => ({...s, enableNotifications: checked}));
+                updateSettings({ alerts: { ...state.settings.alerts, enableNotifications: checked } });
+                showToast(checked ? 'Notifications activées' : 'Notifications désactivées', 'success');
               }} 
               className="w-5 h-5"
             />
+          </div>
+          <div className="rounded-xl border border-slate-100 dark:border-slate-700 p-3 text-xs space-y-2">
+            <p className="text-slate-600 dark:text-slate-300">
+              Autorisation du téléphone :{' '}
+              <strong className={permission === 'granted' ? 'text-emerald-600' : permission === 'denied' ? 'text-red-600' : 'text-amber-600'}>
+                {permission === 'granted' ? 'accordée' : permission === 'denied' ? 'refusée' : permission === 'unsupported' ? 'non disponible' : 'pas encore demandée'}
+              </strong>
+            </p>
+            {permission === 'denied' && (
+              <p className="text-red-700 dark:text-red-300">Réglages du téléphone → Applications → KWA-WATT → Notifications, puis autorisez-les.</p>
+            )}
+            <p className="text-slate-500 dark:text-slate-400">Une alerte reste dans la zone de notification tant qu'elle est affichée sur le tableau de bord (ex. « Début du mois » : du jour {alerts.startOfMonthDays?.[0] ?? 1} au jour {alerts.startOfMonthDays?.[1] ?? 5}), puis disparaît à la prochaine ouverture de l'application. Elle est publiée une seule fois par mois (à 08:00 le jour {alerts.startOfMonthDays?.[0] ?? 1}, même application fermée).</p>
+            <button
+              disabled={testing}
+              onClick={async () => {
+                setTesting(true);
+                const r = await sendTestNotification();
+                setPermission(await getNotificationPermissionState());
+                setTesting(false);
+                showToast(r.ok === true ? 'Notification de test envoyée : faites glisser la barre de notification du téléphone.' : r.message, r.ok === true ? 'success' : 'error');
+              }}
+              className="text-indigo-700 dark:text-indigo-300 font-semibold underline disabled:opacity-50"
+            >
+              {testing ? 'Envoi…' : 'Envoyer une notification de test'}
+            </button>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Durée info-bulle (secondes)</label>

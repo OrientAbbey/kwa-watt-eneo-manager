@@ -3,12 +3,14 @@ import { useApp } from "../store/AppContext";
 import { useRemoteConfig } from "../store/RemoteConfigContext";
 import { computeEnergyStatus } from "../lib/energy";
 import { planRechargeReminders } from "../lib/reminders";
-import { cancelRechargeReminders, notifyAlerts, syncRechargeReminders } from "../lib/notifications";
+import { cancelRechargeReminders, syncAlertNotifications, syncRechargeReminders } from "../lib/notifications";
+import { useDayKey } from "./useDayKey";
 import { getAlerts } from "../lib/alerts";
 
 /**
  * Monté UNE fois à la racine : les alertes et rappels ne dépendent plus de l'onglet ouvert.
- * - alertes du jour (début de mois, seuil, hausse) : une fois par jour ;
+ * - alertes (début de mois, seuil, hausse) : postées une fois par mois dans la zone de notification et retirées dès
+ *   qu'elles ne sont plus affichées au tableau de bord ;
  * - rappels de recharge : replanifiés à chaque changement de données, pour tous les compteurs,
  *   et délivrés par le système même si l'application est fermée.
  */
@@ -18,13 +20,17 @@ export function useAlertScheduler() {
   const alertsCfg = state.settings.alerts;
   const enabled = !!currentUser && !!alertsCfg?.enableNotifications;
 
-  // Alertes du jour
+  const day = useDayKey();
+
+  // Alertes actives : postées une fois par mois dans la zone de notification, retirées quand elles ne sont plus actives
+  // (et « Début du mois » programmé chaque mois à 08:00). Recalculé aussi au changement de jour.
   useEffect(() => {
-    if (!enabled) return;
-    const alerts = getAlerts(state, currentMeter);
-    notifyAlerts(alerts).catch((e) => console.error("Notifications failed", e));
+    const [startDay = 1] = alertsCfg?.startOfMonthDays ?? [1, 5];
+    // Notifications désactivées : on retire aussi ce qui était programmé
+    const alerts = enabled ? getAlerts(state, currentMeter) : [];
+    syncAlertNotifications(alerts, { enabled, startOfMonth: !!alertsCfg?.startOfMonth, startDay }).catch((e) => console.error("Notifications failed", e));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, state.settings.alerts, currentMeter.consumptions]);
+  }, [enabled, day, state.settings.alerts, currentMeter.consumptions]);
 
   // Rappels de recharge (compteur actif ; les rappels d'un autre compteur sont remplacés au changement)
   useEffect(() => {

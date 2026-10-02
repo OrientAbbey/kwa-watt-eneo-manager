@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, Camera, CheckCircle2, ClipboardPaste, Loader2, ScanText } from "lucide-react";
 import BottomSheet from "../ui/BottomSheet";
 import { ParsedSms, parseRechargeSms, parsedFieldCount, findMeterByNumber } from "../../lib/smsParser";
@@ -26,9 +26,13 @@ export default function SmsImportSheet({ open, onClose, onParsed }: SmsImportShe
   const [text, setText] = useState("");
   const [ocrBusy, setOcrBusy] = useState(false);
   const [ocrStatus, setOcrStatus] = useState("");
+  // Numéro de la lecture OCR en cours : si on ferme la fenêtre pendant qu'elle tourne, son résultat est ignoré (sinon il
+  // aurait pollué la zone de texte à la prochaine ouverture).
+  const ocrRun = useRef(0);
 
   useEffect(() => {
     if (!open) {
+      ocrRun.current += 1;
       setText("");
       setOcrBusy(false);
       setOcrStatus("");
@@ -54,10 +58,13 @@ export default function SmsImportSheet({ open, onClose, onParsed }: SmsImportShe
 
   const { openPicker, picker } = useImagePicker(
     async (image) => {
+      const run = ++ocrRun.current;
+      const stale = () => run !== ocrRun.current;
       setOcrBusy(true);
       setOcrStatus("Préparation de la lecture…");
       try {
         const result = await recognizeText(image, ({ status, progress }) => {
+          if (stale()) return;
           const labels: Record<string, string> = {
             "loading tesseract core": "Chargement du moteur…",
             "loading language traineddata": "Téléchargement du modèle de langue (une seule fois)…",
@@ -66,6 +73,7 @@ export default function SmsImportSheet({ open, onClose, onParsed }: SmsImportShe
           };
           setOcrStatus(`${labels[status] ?? status} ${Math.round(progress * 100)}%`);
         });
+        if (stale()) return;
         if (!result.trim()) {
           showToast("Aucun texte lu sur l'image. Essayez une capture d'écran nette ou collez le SMS.", "error");
         } else {
@@ -73,11 +81,14 @@ export default function SmsImportSheet({ open, onClose, onParsed }: SmsImportShe
           showToast("Texte lu : vérifiez les valeurs reconnues");
         }
       } catch (e) {
+        if (stale()) return;
         console.error("OCR failed", e);
         showToast("Lecture de l'image impossible sur cet appareil. Collez le texte du SMS à la place.", "error");
       } finally {
-        setOcrBusy(false);
-        setOcrStatus("");
+        if (!stale()) {
+          setOcrBusy(false);
+          setOcrStatus("");
+        }
       }
     },
     "Photo ou capture du SMS / reçu",
@@ -85,6 +96,7 @@ export default function SmsImportSheet({ open, onClose, onParsed }: SmsImportShe
   );
 
   const paste = async () => {
+    if (ocrBusy) return; // la lecture OCR ajoutera son texte à la fin : on ne laisse rien d'autre écrire dans la zone
     try {
       const clip = await navigator.clipboard.readText();
       if (clip) setText(clip);
@@ -114,7 +126,7 @@ export default function SmsImportSheet({ open, onClose, onParsed }: SmsImportShe
         </p>
 
         <div className="grid grid-cols-2 gap-2">
-          <button onClick={paste} className="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 text-sm font-semibold hover:bg-indigo-100 dark:hover:bg-indigo-900/40">
+          <button onClick={paste} disabled={ocrBusy} className="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 text-sm font-semibold hover:bg-indigo-100 dark:hover:bg-indigo-900/40 disabled:opacity-40 disabled:cursor-not-allowed">
             <ClipboardPaste size={16} /> Coller
           </button>
           <button onClick={openPicker} disabled={ocrBusy} className="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 text-sm font-semibold hover:bg-indigo-100 dark:hover:bg-indigo-900/40 disabled:opacity-50">
@@ -131,9 +143,11 @@ export default function SmsImportSheet({ open, onClose, onParsed }: SmsImportShe
         <textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
-          rows={5}
+          readOnly={ocrBusy}
+          aria-busy={ocrBusy}
+          rows={6}
           placeholder="Ex : Paiement de facture reussi. Montant: 5000 FCFA. ID Transaction: BP260115.1234.A12345…"
-          className="w-full text-sm p-3 border border-slate-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100"
+          className={`w-full text-sm p-3 border border-slate-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 scrollbar-visible resize-none ${ocrBusy ? "opacity-60 cursor-wait" : ""}`}
         />
 
         {text.trim() && (

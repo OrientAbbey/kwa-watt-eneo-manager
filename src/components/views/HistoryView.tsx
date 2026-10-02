@@ -57,7 +57,7 @@ function HistoryRow({ title, subtitle, extra, onEdit, onDelete }: HistoryRowProp
 export default function HistoryView() {
   const { state, currentMeter, addConsumption, updateConsumption, deleteConsumption, addRecharge, updateRecharge, deleteRecharge, importData, showToast, clearSection, setLoading } = useApp();
   const { config } = useRemoteConfig();
-  const { consumeIntent } = useNav();
+  const { consumeIntent, intentTick } = useNav();
   const minAmount = config.minRechargeAmount;
 
   const [tab, setTab] = useState<'consommations' | 'recharges'>('consommations');
@@ -102,7 +102,7 @@ export default function HistoryView() {
     else if (intent.type === 'add-consumption') openAddForm('consommations');
     else if (intent.type === 'paste-sms') { setTab('recharges'); setSmsOpen(true); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [intentTick]); // à chaque navigation, y compris vers cet onglet déjà ouvert (bouton « + » depuis l'Historique)
 
   const onSmsParsed = (parsed: ParsedSms) => {
     openAddForm('recharges');

@@ -20,7 +20,7 @@ import OverflowMenu, { OverflowItem } from "./ui/OverflowMenu";
 import CopyableValue from "./ui/CopyableValue";
 import { cn } from "../lib/utils";
 import { Dialog } from '@capacitor/dialog';
-import { notificationsSupported, requestNotificationPermission } from "../lib/notifications";
+import { getNotificationPermissionState, notificationsSupported, requestNotificationPermission } from "../lib/notifications";
 import { useAlertScheduler } from "../hooks/useAlertScheduler";
 import { useClipboard } from "../hooks/useClipboard";
 
@@ -53,7 +53,7 @@ export default function MainLayout() {
   const { activeTab, navigate } = useNav();
   const {
     state, currentMeter, switchMeter, toastInfo, isLoading, currentUser, updateTheme, updateSettings, showToast,
-    syncStatus, syncError, lastSyncAt, retrySync,
+    syncStatus, syncError, photoIssue, lastSyncAt, retrySync,
   } = useApp();
   const { brandName } = useRemoteConfig();
   const copy = useClipboard();
@@ -66,14 +66,17 @@ export default function MainLayout() {
   // Alertes du jour + rappels de recharge, quel que soit l'onglet ouvert
   useAlertScheduler();
 
+  // Invite unique pour activer les notifications.
+  // IMPORTANT : on interroge l'autorisation du VRAI système (Capacitor). Avant, `Notification.permission` — qui vaut
+  // « denied » par défaut dans une WebView Android — faisait ignorer l'invite en silence : les notifications restaient
+  // désactivées sans jamais avoir été proposées.
   useEffect(() => {
     if (!notificationsSupported() || localStorage.getItem(NOTIF_ASKED_KEY)) return;
     if (state.settings.alerts?.enableNotifications) return;
-    if (typeof Notification !== 'undefined' && Notification.permission === 'denied') {
-      localStorage.setItem(NOTIF_ASKED_KEY, '1');
-      return;
-    }
-    const timer = setTimeout(async () => {
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    const ask = async () => {
       try {
         const { value } = await Dialog.confirm({
           title: 'Notifications',
@@ -84,6 +87,8 @@ export default function MainLayout() {
           if (granted) {
             updateSettings({ alerts: { ...state.settings.alerts, enableNotifications: true } });
             showToast('Notifications activées');
+          } else {
+            showToast("Autorisation refusée : activez les notifications de KWA-WATT dans les réglages du téléphone.", 'error');
           }
         }
       } catch (e) {
@@ -91,8 +96,21 @@ export default function MainLayout() {
       } finally {
         localStorage.setItem(NOTIF_ASKED_KEY, '1');
       }
-    }, 600);
-    return () => clearTimeout(timer);
+    };
+
+    getNotificationPermissionState().then((permission) => {
+      if (cancelled) return;
+      if (permission === 'denied' || permission === 'unsupported') {
+        localStorage.setItem(NOTIF_ASKED_KEY, '1'); // déjà refusé au niveau du système : réglable dans Paramètres
+        return;
+      }
+      timer = setTimeout(ask, 600);
+    });
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // If no user is logged in, show the login view
@@ -347,6 +365,19 @@ export default function MainLayout() {
               <div className="rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900 p-3 text-sm text-red-800 dark:text-red-200">
                 {syncError}
                 <p className="text-xs mt-2 opacity-80">Vos données restent enregistrées sur cet appareil.</p>
+              </div>
+            )}
+            {photoIssue && (
+              <div className="rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900 p-3 text-sm text-amber-900 dark:text-amber-200">
+                <p className="font-semibold">Photos non synchronisées</p>
+                <p className="text-xs mt-1">
+                  {photoIssue.code === 'permission'
+                    ? "Les règles Firestore du projet n'autorisent pas encore les photos (à déployer : voir docs/SYNC_ET_REGLES.md)."
+                    : photoIssue.code === 'too_large'
+                      ? "Certaines photos sont trop lourdes pour la synchronisation."
+                      : "Réseau indisponible ou quota atteint : nouvel essai automatique."}
+                  {' '}Elles restent enregistrées sur ce téléphone ; vos données et recharges, elles, sont bien synchronisées.
+                </p>
               </div>
             )}
             <button onClick={() => { retrySync(); }} disabled={syncStatus === 'syncing'} className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold py-3 rounded-xl">

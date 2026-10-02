@@ -1,10 +1,12 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { AppState, Consumption, EmergencyCredit, Recharge, MeterData } from "../types";
 import { INITIAL_STATE } from "../constants";
-import { syncUserData } from "../lib/sync";
+import { PhotoIssue, resetPhotoSyncSuspension, syncUserData } from "../lib/sync";
 import { classifySyncError } from "../lib/syncErrors";
 import { mergeStates, statesEqual } from "../lib/merge";
-import { fillMissingPhotos } from "../lib/photos";
+import { extractPhotos, injectPhotos } from "../lib/photos";
+import { clearPhotosIncomplete, isPhotosIncomplete, loadLocalState, saveLocalState, setPhotosIncomplete } from "../lib/localStore";
+import { shouldNotifyOnce } from "../lib/notifyOnce";
 import { migrateState } from "../lib/migrations";
 import { createEmergencyCredit, repayEmergencyCredits } from "../lib/energy";
 import { generateAvatar } from "../lib/utils";
@@ -54,6 +56,8 @@ interface AppContextType {
   setLoading: (loading: boolean) => void;
   syncStatus: SyncStatus;
   syncError: string | null;
+  /** Problème de synchro des PHOTOS (les données, elles, sont bien synchronisées). */
+  photoIssue: PhotoIssue | null;
   lastSyncAt: number | null;
   retrySync: () => void;
 }
@@ -95,8 +99,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const [state, setState] = useState<AppState>(() => {
     try {
-      const item = window.localStorage.getItem(STORAGE_KEY);
-      if (item) return migrateState(JSON.parse(item));
+      const loaded = loadLocalState(window.localStorage, STORAGE_KEY);
+      if (loaded) return loaded;
     } catch (error) {
       console.warn("Failed to load local state", error);
     }
@@ -117,7 +121,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const retryCountRef = useRef(0);
   const lastErrorRef = useRef<string | null>(null);
-  const localErrorShownRef = useRef(false);
+  const [photoIssue, setPhotoIssue] = useState<PhotoIssue | null>(null);
+  // Des photos ont pu être perdues localement (écriture échouée) : on les restaure depuis le cloud au lieu de les y supprimer
+  const photosIncompleteRef = useRef(isPhotosIncomplete(window.localStorage, STORAGE_KEY));
+  const forcePullRef = useRef(true); // premier chargement : liste complète des photos du cloud
+  const restoredSinceIncompleteRef = useRef(false);
 
   const showToast = useCallback((message: string, type: ToastType = 'success') => {
     setToastInfo({ message, visible: true, type });
@@ -155,18 +163,29 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return () => unsubscribe();
   }, []);
 
-  // Persistance locale (débouncée). Une erreur (stockage plein) est désormais signalée à l'utilisateur.
+  // Persistance locale (débouncée), en deux clés : données (essentielles) puis photos (lourdes).
   useEffect(() => {
     const flush = () => {
-      try {
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(stateRef.current));
-        localErrorShownRef.current = false;
-      } catch (e) {
-        console.error("Local save failed", e);
-        if (!localErrorShownRef.current) {
-          localErrorShownRef.current = true;
-          showToast("Stockage de l'appareil plein : vos dernières modifications ne sont pas sauvegardées localement. Supprimez des photos.", 'error');
+      const result = saveLocalState(window.localStorage, STORAGE_KEY, stateRef.current);
+      if (!result.coreOk) {
+        console.error("Local save failed (données)");
+        if (shouldNotifyOnce('local-core-full', 60 * 60 * 1000)) {
+          showToast("Mémoire du téléphone saturée : vos dernières modifications ne peuvent pas être enregistrées. Libérez de l'espace puis réessayez.", 'error');
         }
+        return;
+      }
+      if (!result.photosOk) {
+        // Les données sont enregistrées ; seules les photos ne tiennent plus. On le retient pour ne jamais prendre cette
+        // absence pour une suppression volontaire lors de la prochaine synchro.
+        photosIncompleteRef.current = true;
+        restoredSinceIncompleteRef.current = false;
+        setPhotosIncomplete(window.localStorage, STORAGE_KEY);
+        if (shouldNotifyOnce('local-photos-full', 24 * 60 * 60 * 1000)) {
+          showToast("Vos photos ne tiennent plus dans la mémoire de l'application : elles ne seront pas toutes conservées sur ce téléphone (vos données et recharges, elles, sont bien enregistrées). Supprimez des photos inutiles.", 'info');
+        }
+      } else if (photosIncompleteRef.current && restoredSinceIncompleteRef.current) {
+        photosIncompleteRef.current = false;
+        clearPhotosIncomplete(window.localStorage, STORAGE_KEY);
       }
     };
     const timer = setTimeout(flush, appConfig.storage.localDebounceMs);
@@ -202,16 +221,35 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     syncingRef.current = true;
     setSyncStatus('syncing');
     try {
-      const result = await syncUserData(stateRef.current, { write: true });
+      const pull = forcePullRef.current || photosIncompleteRef.current;
+      const result = await syncUserData(stateRef.current, {
+        write: true,
+        pullPhotos: pull,
+        trustLocalDeletions: !photosIncompleteRef.current,
+      });
       if (result) {
+        forcePullRef.current = false;
         const prev = stateRef.current;
-        const next = fillMissingPhotos(mergeStates(prev, result.merged), result.merged);
+        // Données : fusion avec l'état COURANT (il a pu changer pendant la synchro). Photos : changements précis du plan.
+        let next = mergeStates(prev, result.merged);
+        const { take, removeLocal } = result.photoChanges;
+        if (Object.keys(take).length > 0 || removeLocal.length > 0) {
+          const { stripped, photos } = extractPhotos(next);
+          const merged = { ...photos, ...take };
+          removeLocal.forEach((k) => delete merged[k]);
+          next = injectPhotos(stripped, merged);
+        }
         if (!statesEqual(prev, next)) {
           skipNextSaveRef.current = true; // le résultat de la fusion n'a pas besoin d'être renvoyé immédiatement
           setState(next);
         }
-        if (result.photosFailed > 0) {
-          showToast(`${result.photosFailed} photo(s) n'ont pas pu être synchronisées (trop lourdes ou réseau).`, 'info');
+        if (pull && photosIncompleteRef.current && !result.photoIssue) restoredSinceIncompleteRef.current = true;
+        setPhotoIssue(result.photoIssue);
+        // Un message par cause et par jour au maximum (avant : un message à CHAQUE synchronisation tant que ça échouait)
+        if (result.photoIssue?.code === 'permission' && shouldNotifyOnce('photo-sync-permission', 24 * 60 * 60 * 1000)) {
+          showToast("Photos non synchronisées : les règles Firestore du projet ne sont pas à jour (voir docs/SYNC_ET_REGLES.md). Vos photos restent sur ce téléphone.", 'info');
+        } else if (result.photoIssue?.code === 'too_large' && shouldNotifyOnce('photo-sync-too-large', 24 * 60 * 60 * 1000)) {
+          showToast("Certaines photos sont trop lourdes pour la synchronisation : elles restent sur ce téléphone.", 'info');
         }
       }
       setSyncError(null);
@@ -450,6 +488,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const retrySync = () => {
     retryCountRef.current = 0;
     lastErrorRef.current = null;
+    resetPhotoSyncSuspension(); // l'utilisateur redemande explicitement : on retente aussi les photos
+    forcePullRef.current = true;
     void runSync();
   };
 
@@ -485,6 +525,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setLoading,
         syncStatus,
         syncError,
+        photoIssue,
         lastSyncAt,
         retrySync,
       }}

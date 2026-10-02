@@ -10,7 +10,7 @@ import OutagesCard from "../features/OutagesCard";
 
 /** Tout ce qui est propre au compteur prépayé et à l'opérateur, réuni en un seul onglet. */
 export default function ServicesView() {
-  const { consumeIntent, navigate } = useNav();
+  const { consumeIntent, navigate, intentTick } = useNav();
   const { brand } = useRemoteConfig();
 
   useEffect(() => {
@@ -21,7 +21,7 @@ export default function ServicesView() {
       return () => clearTimeout(t);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [intentTick]);
 
   return (
     <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300 pb-10">

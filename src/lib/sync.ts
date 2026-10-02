@@ -3,8 +3,8 @@ import { auth, db } from "./firebase";
 import { AppState } from "../types";
 import { migrateState } from "./migrations";
 import { mergeStates } from "./merge";
-import { MAX_PHOTO_CHARS, extractPhotos, hashString, injectPhotos } from "./photos";
-import { SyncError, classifySyncError } from "./syncErrors";
+import { MAX_PHOTO_CHARS, PhotoManifest, RemotePhoto, extractPhotos, hashString, injectPhotos, planPhotoSync } from "./photos";
+import { SyncError, SyncErrorCode, classifySyncError } from "./syncErrors";
 
 const COLLECTION_NAME = "user_data";
 const PHOTOS_COLLECTION = "photos";
@@ -12,33 +12,58 @@ const MANIFEST_KEY = "kwawatt_photo_manifest";
 /** Marge de sécurité sous la limite de 1 Mio par document Firestore. */
 export const MAX_STATE_BYTES = 900_000;
 
-type Manifest = Record<string, { h: string; t: number }>;
-
-const loadManifest = (): Manifest => {
+const loadManifest = (): PhotoManifest => {
   try {
     return JSON.parse(localStorage.getItem(MANIFEST_KEY) || "{}");
   } catch {
     return {};
   }
 };
-const saveManifest = (m: Manifest) => {
+const saveManifest = (m: PhotoManifest) => {
   try {
     localStorage.setItem(MANIFEST_KEY, JSON.stringify(m));
   } catch {
-    /* quota localStorage : sans conséquence, les photos seront simplement renvoyées */
+    /* quota localStorage : sans conséquence, les photos seront simplement revérifiées */
   }
 };
 
 const byteLength = (s: string) => new TextEncoder().encode(s).length;
 
+/** Problème de synchro des PHOTOS (les données elles-mêmes restent synchronisées). */
+export interface PhotoIssue {
+  code: SyncErrorCode;
+  /** Nombre de photos concernées (0 = inconnu : toute la synchro des photos a été suspendue). */
+  count: number;
+}
+
 export interface SyncResult {
   /** État fusionné (local + cloud), photos comprises. */
   merged: AppState;
-  /** Nombre de photos qui n'ont pas pu être synchronisées (le reste est bien synchronisé). */
-  photosFailed: number;
+  photoIssue: PhotoIssue | null;
+  /** Photos adoptées du cloud / retirées (supprimées ailleurs) : à appliquer à l'état courant, qui a pu changer pendant la synchro. */
+  photoChanges: { take: Record<string, string>; removeLocal: string[] };
   /** Vrai si le cloud contenait des données que l'appareil n'avait pas. */
   changedFromRemote: boolean;
 }
+
+export interface SyncOptions {
+  /** Écrit l'état fusionné dans le cloud (défaut : oui). */
+  write?: boolean;
+  /** Télécharge aussi la liste des photos du cloud (premier chargement, synchro manuelle). Sinon synchro « légère ». */
+  pullPhotos?: boolean;
+  /** Faux si des photos ont pu être perdues localement (voir planPhotoSync) : on les restaure au lieu de les supprimer du cloud. */
+  trustLocalDeletions?: boolean;
+}
+
+/**
+ * Tant qu'une erreur durable (règles Firestore refusant les photos…) est connue, on suspend la synchro des photos
+ * pour la session au lieu de réessayer — et d'afficher une erreur — à chaque modification.
+ */
+let photoSuspended: SyncErrorCode | null = null;
+export const resetPhotoSyncSuspension = () => {
+  photoSuspended = null;
+};
+const isDurable = (c: SyncErrorCode) => c === "permission" || c === "too_large";
 
 async function readRemoteState(uid: string): Promise<AppState | null> {
   const snap = await getDoc(doc(db, COLLECTION_NAME, uid));
@@ -48,104 +73,63 @@ async function readRemoteState(uid: string): Promise<AppState | null> {
   return null;
 }
 
-/** Télécharge les photos distantes et applique les règles de conflit (la plus récente gagne). */
-async function pullPhotos(uid: string, state: AppState): Promise<{ state: AppState; failed: number }> {
-  const manifest = loadManifest();
-  let failed = 0;
-  try {
-    const snap = await getDocs(collection(db, COLLECTION_NAME, uid, PHOTOS_COLLECTION));
-    const remote: Record<string, { data: string; t: number }> = {};
-    snap.forEach((d) => {
-      const v = d.data();
-      if (typeof v.data === "string") remote[d.id] = { data: v.data, t: Number(v.updatedAt) || 0 };
-    });
-    const { photos: local } = extractPhotos(state);
-    const take: Record<string, string> = {};
-    for (const [key, r] of Object.entries(remote)) {
-      const known = manifest[key];
-      if (!local[key]) {
-        take[key] = r.data;
-        manifest[key] = { h: hashString(r.data), t: r.t };
-      } else if (known && known.t < r.t && hashString(local[key]) === known.h) {
-        // Photo modifiée ailleurs, sans modification locale depuis : on prend la version distante.
-        take[key] = r.data;
-        manifest[key] = { h: hashString(r.data), t: r.t };
-      }
-    }
-    // Photo supprimée depuis un autre appareil (connue de nous, absente du cloud)
-    const removedRemotely = Object.keys(manifest).filter((k) => !(k in remote) && local[k] && manifest[k].h === hashString(local[k]));
-    let next = state;
-    if (Object.keys(take).length > 0) {
-      const { stripped, photos } = extractPhotos(state);
-      next = injectPhotos(stripped, { ...photos, ...take });
-    }
-    if (removedRemotely.length > 0) {
-      const { stripped, photos } = extractPhotos(next);
-      for (const k of removedRemotely) {
-        delete photos[k];
-        delete manifest[k];
-      }
-      next = injectPhotos(stripped, photos);
-    }
-    saveManifest(manifest);
-    return { state: next, failed };
-  } catch (e) {
-    console.warn("Pull photos impossible", e);
-    failed += 1;
-    return { state, failed };
-  }
-}
-
-/** Envoie uniquement les photos modifiées et supprime celles qui n'existent plus. */
-async function pushPhotos(uid: string, photos: Record<string, string>, allowDelete: boolean): Promise<number> {
-  const manifest = loadManifest();
-  let failed = 0;
-  for (const [key, data] of Object.entries(photos)) {
-    const h = hashString(data);
-    if (manifest[key]?.h === h) continue;
-    if (data.length > MAX_PHOTO_CHARS) {
-      failed += 1;
-      continue;
-    }
-    try {
-      const t = Date.now();
-      await setDoc(doc(db, COLLECTION_NAME, uid, PHOTOS_COLLECTION, key), { data, updatedAt: t });
-      manifest[key] = { h, t };
-    } catch (e) {
-      console.warn("Envoi photo échoué", key, e);
-      failed += 1;
-    }
-  }
-  for (const key of allowDelete ? Object.keys(manifest) : []) {
-    if (key in photos) continue;
-    try {
-      await deleteDoc(doc(db, COLLECTION_NAME, uid, PHOTOS_COLLECTION, key));
-      delete manifest[key];
-    } catch (e) {
-      console.warn("Suppression photo distante échouée", key, e);
-    }
-  }
-  saveManifest(manifest);
-  return failed;
+async function listRemotePhotos(uid: string): Promise<Record<string, RemotePhoto>> {
+  const snap = await getDocs(collection(db, COLLECTION_NAME, uid, PHOTOS_COLLECTION));
+  const out: Record<string, RemotePhoto> = {};
+  snap.forEach((d) => {
+    const v = d.data();
+    if (typeof v.data === "string") out[d.id] = { data: v.data, t: Number(v.updatedAt) || 0 };
+  });
+  return out;
 }
 
 /**
  * Synchronise l'état avec le cloud : lit, fusionne enregistrement par enregistrement, puis écrit.
- * `write: false` sert au premier chargement après connexion (on récupère sans écraser).
+ * Les photos suivent un plan par photo (planPhotoSync) ; leurs échecs n'empêchent jamais la synchro des données.
  */
-export async function syncUserData(local: AppState, options: { write?: boolean } = {}): Promise<SyncResult | null> {
+export async function syncUserData(local: AppState, options: SyncOptions = {}): Promise<SyncResult | null> {
   const user = auth.currentUser;
   if (!user) return null;
   const write = options.write ?? true;
+  const pull = options.pullPhotos ?? false;
   try {
     const remote = await readRemoteState(user.uid);
     let merged = remote ? mergeStates(local, remote) : local;
-    const changedFromRemote = remote ? JSON.stringify(extractPhotos(merged).stripped) !== JSON.stringify(extractPhotos(local).stripped) : false;
+    const changedFromRemote = remote
+      ? JSON.stringify(extractPhotos(merged).stripped) !== JSON.stringify(extractPhotos(local).stripped)
+      : false;
 
-    // Récupération des photos avant tout (évite de supprimer côté cloud des photos qu'on n'a pas encore vues)
-    const pulled = await pullPhotos(user.uid, merged);
-    merged = pulled.state;
-    let photosFailed = pulled.failed;
+    let issue: PhotoIssue | null = photoSuspended ? { code: photoSuspended, count: 0 } : null;
+    const manifest = loadManifest();
+    let plan: ReturnType<typeof planPhotoSync> | null = null;
+    let remotePhotos: Record<string, RemotePhoto> | null = null;
+
+    if (!photoSuspended) {
+      try {
+        remotePhotos = pull ? await listRemotePhotos(user.uid) : null;
+      } catch (e) {
+        const code = classifySyncError(e).code;
+        console.warn("Liste des photos du cloud indisponible", code);
+        if (isDurable(code)) photoSuspended = code;
+        issue = { code, count: 0 };
+      }
+      if (!issue) {
+        const { stripped, photos } = extractPhotos(merged);
+        plan = planPhotoSync({ local: photos, remote: remotePhotos, manifest, trustLocalDeletions: options.trustLocalDeletions });
+        if (Object.keys(plan.take).length > 0 || plan.removeLocal.length > 0) {
+          const next = { ...photos, ...plan.take };
+          plan.removeLocal.forEach((k) => delete next[k]);
+          merged = injectPhotos(stripped, next);
+          for (const [k, data] of Object.entries(plan.take)) manifest[k] = { h: hashString(data), t: remotePhotos?.[k]?.t ?? Date.now() };
+          plan.removeLocal.forEach((k) => delete manifest[k]);
+        }
+        plan.record.forEach((k) => {
+          const r = remotePhotos?.[k];
+          if (r) manifest[k] = { h: hashString(r.data), t: r.t };
+          else delete manifest[k];
+        });
+      }
+    }
 
     if (write) {
       const { stripped, photos } = extractPhotos(merged);
@@ -154,10 +138,51 @@ export async function syncUserData(local: AppState, options: { write?: boolean }
         throw new SyncError("too_large", "Vos données sont trop volumineuses pour la synchronisation.");
       }
       await setDoc(doc(db, COLLECTION_NAME, user.uid), { state: json, updatedAt: serverTimestamp() });
-      // Si la récupération des photos a échoué, on ne supprime rien côté cloud (état local potentiellement incomplet).
-      photosFailed += await pushPhotos(user.uid, photos, pulled.failed === 0);
+
+      if (plan && !issue) {
+        let failed = 0;
+        let firstCode: SyncErrorCode | null = null;
+        const fail = (code: SyncErrorCode) => {
+          failed += 1;
+          firstCode = firstCode ?? code;
+        };
+        for (const key of plan.upload) {
+          const data = photos[key];
+          if (!data) continue;
+          if (data.length > MAX_PHOTO_CHARS) {
+            fail("too_large");
+            continue;
+          }
+          try {
+            const t = Date.now();
+            await setDoc(doc(db, COLLECTION_NAME, user.uid, PHOTOS_COLLECTION, key), { data, updatedAt: t });
+            manifest[key] = { h: hashString(data), t };
+          } catch (e) {
+            const code = classifySyncError(e).code;
+            fail(code);
+            if (isDurable(code)) {
+              photoSuspended = code; // inutile d'insister sur les photos suivantes
+              break;
+            }
+          }
+        }
+        for (const key of plan.deleteRemote) {
+          try {
+            await deleteDoc(doc(db, COLLECTION_NAME, user.uid, PHOTOS_COLLECTION, key));
+            delete manifest[key];
+          } catch (e) {
+            const code = classifySyncError(e).code;
+            if (isDurable(code)) {
+              photoSuspended = code;
+              break;
+            }
+          }
+        }
+        if (failed > 0 && firstCode) issue = { code: firstCode, count: failed };
+      }
     }
-    return { merged, photosFailed, changedFromRemote };
+    saveManifest(manifest);
+    return { merged, photoIssue: issue, photoChanges: { take: plan?.take ?? {}, removeLocal: plan?.removeLocal ?? [] }, changedFromRemote };
   } catch (error) {
     throw classifySyncError(error);
   }

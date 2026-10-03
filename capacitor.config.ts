@@ -13,6 +13,9 @@ const config: CapacitorConfig = {
   },
   android: {
     overrideUserAgent: appConfig.android.overrideUserAgent,
+    // Fond de la WebView. Sans cela elle est BLANCHE par défaut (Bridge.java) et recouvre le fond du splash : c'est
+    // l'aplat blanc qui restait après le démarrage, même avec un thème et un CSS corrects.
+    backgroundColor: '#1e1b4b',
   },
   plugins: {
     SplashScreen: {

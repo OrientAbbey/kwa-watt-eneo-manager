@@ -3,7 +3,7 @@ import { useApp } from "../store/AppContext";
 import { useNav, TabValue } from "../store/NavContext";
 import { useRemoteConfig } from "../store/RemoteConfigContext";
 import {
-  Calculator, Home, History, User, Settings, HelpCircle, Plus, Loader2, CloudOff, Cloud, CloudAlert, Moon, Sun,
+  Calculator, Home, History, User, Settings, HelpCircle, Plus, Bell, Loader2, CloudOff, Cloud, CloudAlert, Moon, Sun,
   Menu, LifeBuoy, ClipboardPaste, BatteryCharging, Zap, Wrench, ChevronDown, RefreshCw, Check,
 } from "lucide-react";
 import DashboardView from "./views/DashboardView";
@@ -278,20 +278,25 @@ export default function MainLayout() {
         </div>
 
         {/* Bouton d'action flottant (mobile) : ajouter recharge / relevé / SMS.
-            Le point rouge en indique le bon état : il y a au moins une alerte active dans la zone de notification. */}
+            ATTENTION : pas de `relative` sur ce bouton — il est en `fixed` et Tailwind génère `.relative` APRÈS
+            `.fixed`, ce qui le ferait repasser en flux normal (pleine largeur). Le repère est donc sur un span interne.
+            La cloche signale une alerte active dans la zone de notification ; plus petite que le bouton. */}
         <button
           onClick={() => setAddSheetOpen(true)}
           aria-label={alertCount > 0 ? `Ajouter — ${alertCount} alerte${alertCount > 1 ? 's' : ''} en cours` : 'Ajouter'}
-          className="md:hidden fixed right-4 bottom-24 z-40 bg-orange-500 hover:bg-orange-600 active:scale-95 text-white p-4 rounded-full shadow-xl shadow-orange-500/40 transition-transform relative"
+          className="md:hidden fixed right-4 bottom-24 z-40 bg-orange-500 hover:bg-orange-600 active:scale-95 text-white p-4 rounded-full shadow-xl shadow-orange-500/40 transition-transform"
         >
-          <Plus size={26} />
-          {alertCount > 0 && (
-            <span
-              aria-hidden="true"
-              data-testid="fab-alert-dot"
-              className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-red-500 border-2 border-white dark:border-slate-900"
-            />
-          )}
+          <span className="relative inline-flex">
+            <Plus size={26} />
+            {alertCount > 0 && (
+              <span
+                aria-hidden="true"
+                className="absolute -top-3 -right-3 w-5 h-5 rounded-full bg-white text-orange-600 border border-orange-200 shadow flex items-center justify-center"
+              >
+                <Bell size={12} strokeWidth={2.75} />
+              </span>
+            )}
+          </span>
         </button>
 
         {/* Mobile Bottom Navigation */}

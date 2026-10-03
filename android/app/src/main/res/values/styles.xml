@@ -12,9 +12,10 @@
     <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
-        <!-- Fond indigo + logo (et non @null) : entre la fin du splash et le premier rendu de la WebView, la fenêtre
-             affiche encore la marque au lieu d'un aplat blanc. -->
-        <item name="android:background">@drawable/splash_screen</item>
+        <!-- @null volontairement : un fond de fenêtre « logo » ici se retrouve derrière les fenêtres de dialogue
+             (l'invite de permission, les BottomSheet) et le logo s'y affiche enTiles. Le fond avant/après le splash est
+             assuré par `android.backgroundColor` (WebView) + le style inline de index.html. -->
+        <item name="android:background">@null</item>
     </style>
 
 

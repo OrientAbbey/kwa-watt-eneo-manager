@@ -3,6 +3,8 @@ name: Build Android APK
 on:
   push:
     branches: [ "main", "master" ]
+  pull_request: # L'APK est aussi construit pour chaque PR afin de pouvoir la tester avant merge
+    branches: [ "main" ]
   workflow_dispatch: # Permet de lancer la compilation manuellement
 
 env:

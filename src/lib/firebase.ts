@@ -5,6 +5,7 @@ import { Capacitor } from '@capacitor/core';
 import { SocialLogin } from '@capgo/capacitor-social-login';
 import { appConfig } from '../config';
 import firebaseConfig from '../../firebase-applet-config.json';
+import { GoogleSignInError, OFFLINE_MESSAGE, isOffline } from './signInErrors';
 
 const isNativePlatform = Capacitor.isNativePlatform();
 
@@ -33,7 +34,7 @@ const signInWithGoogleNative = async () => {
     options: { scopes: [...appConfig.google.scopes] },
   });
   if (res.provider !== 'google' || res.result.responseType !== 'online' || !res.result.idToken) {
-    throw new Error('Connexion Google annulée ou aucun jeton reçu.');
+    throw new GoogleSignInError('no-token', 'Connexion Google annulée ou aucun jeton reçu.');
   }
   const credential = GoogleAuthProvider.credential(res.result.idToken);
   return (await signInWithCredential(auth, credential)).user;
@@ -41,6 +42,9 @@ const signInWithGoogleNative = async () => {
 
 export const signInWithGoogle = async () => {
   try {
+    // Sans réseau, le plugin natif remonte « Google Sign-In cancelled by user » : on ne lance pas l'écran Google.
+    if (isOffline()) throw new GoogleSignInError('offline', OFFLINE_MESSAGE);
+
     if (isNativePlatform) {
       return await signInWithGoogleNative();
     }
@@ -57,12 +61,6 @@ export const signInWithGoogle = async () => {
       throw error;
     }
   } catch (error: any) {
-    if (isNativePlatform && error?.code === '10') {
-      console.error('Google sign-in failed: Android client not configured', error);
-      throw new Error(
-        'Connexion Google indisponible : configuration Android manquante (google-services.json ou client OAuth Android). Voir la procédure de configuration.'
-      );
-    }
     console.error('Error signing in with Google', error);
     throw error;
   }

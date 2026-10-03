@@ -2,7 +2,7 @@ import { Capacitor } from '@capacitor/core';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { AppAlert } from './alerts';
 import { REMINDER_IDS, ReminderPlan } from './reminders';
-import { ALERT_NOTIFICATION_IDS, PostedState, START_CRON_ID, TEST_NOTIFICATION_ID, planAlertNotifications, planStartCron } from './alertNotifications';
+import { ALERT_NOTIFICATION_IDS, DeliveredAlerts, PostedState, START_CRON_ID, TEST_NOTIFICATION_ID, alertIdForNotificationId, forgetInactive, markPosted, periodKey, planAlertNotifications, planStartCron } from './alertNotifications';
 
 const isNativePlatform = Capacitor.isNativePlatform();
 const scheduledKey = 'kwawatt_reminders_sched';
@@ -99,6 +99,22 @@ const savePosted = (p: PostedState) => {
   } catch { /* sans conséquence : au pire l'alerte est reposée */ }
 };
 
+/** Alertes que le téléphone AFFICHE réellement dans la zone de notification (source de vérité de la synchronisation). */
+async function getDeliveredAlerts(): Promise<DeliveredAlerts> {
+  try {
+    const { notifications } = await LocalNotifications.getDeliveredNotifications();
+    const ids = new Set<AppAlert['id']>();
+    for (const n of notifications) {
+      const alertId = alertIdForNotificationId(n.id);
+      if (alertId) ids.add(alertId);
+    }
+    return ids;
+  } catch (e) {
+    console.warn('Lecture des notifications affichées impossible', e);
+    return new Set();
+  }
+}
+
 export interface AlertSyncConfig {
   /** Notifications activées dans l'application. */
   enabled: boolean;
@@ -108,38 +124,40 @@ export interface AlertSyncConfig {
 
 /**
  * Aligne la zone de notification sur les alertes ACTIVES du tableau de bord :
- *  - une alerte active est postée UNE fois par mois (immédiatement : aucune alarme, aucun délai, aucune permission
- *    « alarme exacte » nécessaire) et reste affichée tant qu'elle est active ;
+ *  - une alerte active absente de la zone de notification est postée immédiatement (aucune alarme, aucun délai, aucune
+ *    permission « alarme exacte » nécessaire) et y reste tant qu'elle est active (`ongoing`) ;
  *  - une alerte qui n'est plus active est retirée ;
  *  - « Début du mois » est aussi programmé chaque mois à 08:00, même si l'application reste fermée.
+ * La comparaison se fait sur les notifications réellement affichées : rien n'est compté « déjà posté » côté local.
  */
 export async function syncAlertNotifications(alerts: AppAlert[], cfg: AlertSyncConfig, now: Date = new Date()): Promise<void> {
   const cron = planStartCron({ enabled: cfg.enabled, startOfMonth: cfg.startOfMonth, startDay: cfg.startDay });
 
   if (!isNativePlatform) {
-    // Navigateur : Notification API, une fois par période
+    // Navigateur : Notification API, une fois par période (la fenêtre se ferme seule après quelques secondes)
     if (!cfg.enabled || !notificationsSupported() || Notification.permission !== 'granted') return;
-    const plan = planAlertNotifications(alerts, loadPosted(), now, { startCronPending: false, startDay: cron.day });
+    const posted = loadPosted();
+    const period = periodKey(now);
+    const shown = new Set(
+      (Object.keys(posted) as AppAlert['id'][]).filter((id) => posted[id] === period)
+    );
+    const plan = planAlertNotifications(alerts, shown, now, { startCronPending: false, startDay: cron.day });
     plan.post.forEach((p) => {
       const n = new Notification(p.title, { body: p.body, tag: p.alertId });
       setTimeout(() => n.close(), 8000);
     });
-    savePosted(plan.nextPosted);
+    savePosted(markPosted(forgetInactive(posted, alerts.map((a) => a.id)), plan.post.map((p) => p.alertId), period));
     return;
   }
 
   if (!cfg.enabled) {
-    // Désactivées : on retire le déclencheur mensuel ET ce qui est déjà affiché, et on oublie l'historique
-    // (réactivées plus tard dans le mois, les alertes encore actives seront reposées).
+    // Désactivées : on retire le déclencheur mensuel ET tout ce qui est affiché, et on oublie l'historique navigateur
     await cancelStartCron();
-    const posted = loadPosted();
-    if (Object.keys(posted).length > 0) {
-      try {
-        const ids = [...(Object.keys(posted) as AppAlert['id'][]).map((k) => ALERT_NOTIFICATION_IDS[k]), START_CRON_ID];
-        await LocalNotifications.removeDeliveredNotifications({ notifications: ids.map((id) => ({ id, title: '', body: '' })) });
-      } catch { /* rien à retirer */ }
-      savePosted({});
-    }
+    try {
+      const ids = [...Object.values(ALERT_NOTIFICATION_IDS), START_CRON_ID];
+      await LocalNotifications.removeDeliveredNotifications({ notifications: ids.map((id) => ({ id, title: '', body: '' })) });
+    } catch { /* rien à retirer */ }
+    savePosted({});
     return;
   }
   if (!(await hasNativePermission())) return;
@@ -159,6 +177,9 @@ export async function syncAlertNotifications(alerts: AppAlert[], cfg: AlertSyncC
             body: "N'oubliez pas de vérifier votre crédit et de recharger si nécessaire.",
             // « chaque mois, le jour N à 08:00 » : le plugin se reprogramme tout seul après chaque déclenchement
             schedule: { on: { day: cron.day, hour: cron.hour, minute: 0, second: 0 }, allowWhileIdle: true },
+            // `ongoing` : Android refuse le balayage, la notification reste jusqu'à la fin de la période du tableau
+            // de bord (l'app la retire ensuite explicitement dès que l'alerte n'est plus active).
+            ongoing: true,
             autoCancel: false,
             ...nativeBase,
           }],
@@ -173,9 +194,8 @@ export async function syncAlertNotifications(alerts: AppAlert[], cfg: AlertSyncC
     console.warn('Programmation de « Début du mois » impossible', e);
   }
 
-  // 2) Alertes actives : posées maintenant (immédiat) ; inactives : retirées
-  const plan = planAlertNotifications(alerts, loadPosted(), now, { startCronPending: cronPending, startDay: cron.day });
-  const posted = { ...plan.nextPosted };
+  // 2) Alertes actives : posées maintenant si absentes de la zone de notification ; inactives : retirées
+  const plan = planAlertNotifications(alerts, await getDeliveredAlerts(), now, { startCronPending: cronPending, startDay: cron.day });
   if (plan.removeIds.length > 0) {
     try {
       await LocalNotifications.removeDeliveredNotifications({ notifications: plan.removeIds.map((id) => ({ id, title: '', body: '' })) });
@@ -187,16 +207,23 @@ export async function syncAlertNotifications(alerts: AppAlert[], cfg: AlertSyncC
     try {
       // Sans `schedule` : le plugin affiche la notification immédiatement (pas d'alarme)
       await LocalNotifications.schedule({
-        notifications: plan.post.map((p) => ({ id: p.id, title: p.title, body: p.body, autoCancel: p.autoCancel, ...nativeBase })),
+        notifications: plan.post.map((p) => ({
+          id: p.id,
+          title: p.title,
+          body: p.body,
+          // `ongoing` : ni balayage ni appui ne la retirent. Elle ne part que quand l'alerte devient inactive (ci-dessus)
+          // ou quand l'utilisateur désactive les notifications.
+          ongoing: true,
+          autoCancel: false,
+          ...nativeBase,
+        })),
       });
     } catch (e) {
-      // ex. « Notifications not enabled on this device » : coupées dans les réglages du téléphone. On ne marque pas
-      // comme postée pour réessayer dès que ce sera réparé.
+      // ex. « Notifications not enabled on this device » : coupées dans les réglages du téléphone. Rien n'est mémorisé :
+      // la prochaine ouverture réessaiera.
       console.warn('Affichage des notifications impossible', e);
-      plan.post.forEach((p) => delete posted[p.alertId]);
     }
   }
-  savePosted(posted);
 }
 
 async function cancelStartCron(): Promise<void> {

@@ -16,6 +16,8 @@ const config: CapacitorConfig = {
   },
   plugins: {
     SplashScreen: {
+      // Le splash se retire au premier rendu React (cf. src/main.tsx) ; ces valeurs ne sont que le filet de sécurité
+      // si le JS est lent ou plante.
       launchShowDuration: 2000,
       launchAutoHide: true,
       backgroundColor: "#1e1b4b",
@@ -27,7 +29,8 @@ const config: CapacitorConfig = {
       spinnerColor: "#f97316",
       splashFullScreen: true,
       splashImmersive: true,
-      layoutName: "launch_screen",
+      // pas de `layoutName` : res/layout/launch_screen.xml n'existe pas (le plugin journalisait « Layout not found »
+      // et retombait sur son ImageView). Le logo est fourni par `androidSplashResourceName` + le thème de lancement.
       useDialog: false,
     },
     LocalNotifications: {

@@ -8,6 +8,12 @@
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 }
 
+html,
+body {
+  /* Fond de marque : évite tout aplat blanc avant/peu après le premier rendu (cf. index.html). */
+  background-color: #1e1b4b;
+}
+
 body {
   font-family: var(--font-sans);
 }

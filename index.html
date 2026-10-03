@@ -10,6 +10,11 @@
     />
     <meta name="theme-color" content="#4f46e5" />
     <title>KWA-WATT</title>
+    <style>
+      /* Appliqué avant tout chargement du CSS de l'application : sans cela, la fenêtre est blanche entre la fin du
+         splash et le premier rendu React. Même fond que le splash (#1e1b4b) : la transition est invisible. */
+      html, body, #root { height: 100%; background-color: #1e1b4b; margin: 0; }
+    </style>
   </head>
   <body>
     <div id="root"></div>

@@ -1,4 +1,4 @@
-import React, { createElement, useState, useEffect } from "react";
+import React, { createElement, useState, useEffect, useMemo } from "react";
 import { useApp } from "../store/AppContext";
 import { useNav, TabValue } from "../store/NavContext";
 import { useRemoteConfig } from "../store/RemoteConfigContext";
@@ -21,6 +21,7 @@ import CopyableValue from "./ui/CopyableValue";
 import { cn } from "../lib/utils";
 import { Dialog } from '@capacitor/dialog';
 import { getNotificationPermissionState, notificationsSupported, requestNotificationPermission } from "../lib/notifications";
+import { getAlerts } from "../lib/alerts";
 import { useAlertScheduler } from "../hooks/useAlertScheduler";
 import { useClipboard } from "../hooks/useClipboard";
 
@@ -65,6 +66,12 @@ export default function MainLayout() {
 
   // Alertes du jour + rappels de recharge, quel que soit l'onglet ouvert
   useAlertScheduler();
+
+  // Même source que les notifications système : le point du bouton flottant signale une alerte encore active.
+  const alertCount = useMemo(() => {
+    if (!currentUser || !state.settings.alerts?.enableNotifications) return 0;
+    return getAlerts(state, currentMeter).length;
+  }, [currentUser, state, currentMeter]);
 
   // Invite unique pour activer les notifications.
   // IMPORTANT : on interroge l'autorisation du VRAI système (Capacitor). Avant, `Notification.permission` — qui vaut
@@ -270,13 +277,21 @@ export default function MainLayout() {
           </div>
         </div>
 
-        {/* Bouton d'action flottant (mobile) : ajouter recharge / relevé / SMS */}
+        {/* Bouton d'action flottant (mobile) : ajouter recharge / relevé / SMS.
+            Le point rouge en indique le bon état : il y a au moins une alerte active dans la zone de notification. */}
         <button
           onClick={() => setAddSheetOpen(true)}
-          aria-label="Ajouter"
-          className="md:hidden fixed right-4 bottom-24 z-40 bg-orange-500 hover:bg-orange-600 active:scale-95 text-white p-4 rounded-full shadow-xl shadow-orange-500/40 transition-transform"
+          aria-label={alertCount > 0 ? `Ajouter — ${alertCount} alerte${alertCount > 1 ? 's' : ''} en cours` : 'Ajouter'}
+          className="md:hidden fixed right-4 bottom-24 z-40 bg-orange-500 hover:bg-orange-600 active:scale-95 text-white p-4 rounded-full shadow-xl shadow-orange-500/40 transition-transform relative"
         >
           <Plus size={26} />
+          {alertCount > 0 && (
+            <span
+              aria-hidden="true"
+              data-testid="fab-alert-dot"
+              className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-red-500 border-2 border-white dark:border-slate-900"
+            />
+          )}
         </button>
 
         {/* Mobile Bottom Navigation */}

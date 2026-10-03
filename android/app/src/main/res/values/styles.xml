@@ -12,7 +12,9 @@
     <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
-        <item name="android:background">@null</item>
+        <!-- Fond indigo + logo (et non @null) : entre la fin du splash et le premier rendu de la WebView, la fenêtre
+             affiche encore la marque au lieu d'un aplat blanc. -->
+        <item name="android:background">@drawable/splash_screen</item>
     </style>
 
 
@@ -22,5 +24,8 @@
         <!-- Android 12+ : écran de démarrage système. Sans ces deux lignes, il agrandit l'icône adaptative (PNG) : flou. -->
         <item name="windowSplashScreenBackground">@color/splash_background</item>
         <item name="windowSplashScreenAnimatedIcon">@drawable/splash_icon</item>
+        <!-- Thème appliqué à la sortie du splash (installSplashScreen) : sans lui, Android 12+ peut afficher une fenêtre
+             vide/non stylée entre le splash système et le contenu. -->
+        <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
     </style>
 </resources>

@@ -13,6 +13,9 @@
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:background">@null</item>
+        <!-- Thème appliqué par BridgeActivity APRÈS le splash : sans cette ligne le fond de fenêtre est blanc tant que
+             la page web n'a rien affiché (la « page blanche » après le splash). -->
+        <item name="android:windowBackground">@color/splash_background</item>
     </style>
 
 

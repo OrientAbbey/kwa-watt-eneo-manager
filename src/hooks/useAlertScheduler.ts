@@ -5,6 +5,7 @@ import { computeEnergyStatus } from "../lib/energy";
 import { planRechargeReminders } from "../lib/reminders";
 import { cancelRechargeReminders, syncAlertNotifications, syncRechargeReminders } from "../lib/notifications";
 import { useDayKey } from "./useDayKey";
+import { useForegroundTick } from "./useForegroundTick";
 import { getAlerts } from "../lib/alerts";
 
 /**
@@ -21,16 +22,18 @@ export function useAlertScheduler() {
   const enabled = !!currentUser && !!alertsCfg?.enableNotifications;
 
   const day = useDayKey();
+  const foreground = useForegroundTick();
 
   // Alertes actives : postées une fois par mois dans la zone de notification, retirées quand elles ne sont plus actives
-  // (et « Début du mois » programmé chaque mois à 08:00). Recalculé aussi au changement de jour.
+  // (et « Début du mois » programmé chaque mois à minuit). Recalculé à chaque retour au premier plan et au changement de jour :
+  // une notification retirée par « Supprimer » est republiée à l'ouverture suivante si l'alerte est toujours active.
   useEffect(() => {
     const [startDay = 1] = alertsCfg?.startOfMonthDays ?? [1, 5];
     // Notifications désactivées : on retire aussi ce qui était programmé
     const alerts = enabled ? getAlerts(state, currentMeter) : [];
     syncAlertNotifications(alerts, { enabled, startOfMonth: !!alertsCfg?.startOfMonth, startDay }).catch((e) => console.error("Notifications failed", e));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, day, state.settings.alerts, currentMeter.consumptions]);
+  }, [enabled, day, foreground, state.settings.alerts, currentMeter.consumptions]);
 
   // Rappels de recharge (compteur actif ; les rappels d'un autre compteur sont remplacés au changement)
   useEffect(() => {

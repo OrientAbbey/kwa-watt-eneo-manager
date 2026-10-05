@@ -23,6 +23,8 @@ import { Dialog } from '@capacitor/dialog';
 import { getNotificationPermissionState, notificationsSupported, requestNotificationPermission } from "../lib/notifications";
 import { useAlertScheduler } from "../hooks/useAlertScheduler";
 import { useClipboard } from "../hooks/useClipboard";
+import { useActiveAlerts } from "../hooks/useActiveAlerts";
+import NotificationBell from "./features/NotificationBell";
 
 const NOTIF_ASKED_KEY = 'kwawatt_notif_asked';
 
@@ -65,6 +67,7 @@ export default function MainLayout() {
 
   // Alertes du jour + rappels de recharge, quel que soit l'onglet ouvert
   useAlertScheduler();
+  const activeAlerts = useActiveAlerts();
 
   // Invite unique pour activer les notifications.
   // IMPORTANT : on interroge l'autorisation du VRAI système (Capacitor). Avant, `Notification.permission` — qui vaut
@@ -269,6 +272,14 @@ export default function MainLayout() {
             {views[activeTab]}
           </div>
         </div>
+
+        {/* Indicateur de notifications : au-dessus du bouton « + » */}
+        <NotificationBell
+          alerts={activeAlerts}
+          notificationsEnabled={!!state.settings.alerts?.enableNotifications}
+          onGoSettings={() => navigate('settings')}
+          onGoDashboard={() => navigate('dashboard')}
+        />
 
         {/* Bouton d'action flottant (mobile) : ajouter recharge / relevé / SMS */}
         <button

@@ -369,7 +369,7 @@ export default function SettingsView() {
             {permission === 'denied' && (
               <p className="text-red-700 dark:text-red-300">Réglages du téléphone → Applications → KWA-WATT → Notifications, puis autorisez-les.</p>
             )}
-            <p className="text-slate-500 dark:text-slate-400">Une alerte reste dans la zone de notification tant qu'elle est affichée sur le tableau de bord (ex. « Début du mois » : du jour {alerts.startOfMonthDays?.[0] ?? 1} au jour {alerts.startOfMonthDays?.[1] ?? 5}), puis disparaît à la prochaine ouverture de l'application. Elle est publiée une seule fois par mois (à 08:00 le jour {alerts.startOfMonthDays?.[0] ?? 1}, même application fermée).</p>
+            <p className="text-slate-500 dark:text-slate-400">Une alerte active (ex. « Début du mois » : du jour {alerts.startOfMonthDays?.[0] ?? 1} au jour {alerts.startOfMonthDays?.[1] ?? 5}) s'affiche en permanence dans la zone de notification : on ne peut pas la balayer. Pour la retirer, ouvrez la notification et utilisez le bouton « Supprimer ». Si l'alerte est toujours active, elle réapparaît à la prochaine ouverture de l'application ; quand elle n'est plus active, elle disparaît. « Début du mois » est aussi publiée chaque mois à minuit le jour {alerts.startOfMonthDays?.[0] ?? 1}, même application fermée. Désactiver les notifications retire tout.</p>
             <button
               disabled={testing}
               onClick={async () => {

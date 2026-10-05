@@ -3,6 +3,8 @@ import { useApp } from '../../store/AppContext';
 import { signInWithGoogle } from '../../lib/firebase';
 import { generateAvatar } from '../../lib/utils';
 import { useRemoteConfig } from '../../store/RemoteConfigContext';
+import { describeSignInError, OFFLINE_MESSAGE } from '../../lib/signInErrors';
+import { probeInternet, useOnline } from '../../lib/connectivity';
 
 export default function LoginView() {
   const { setCurrentUser } = useApp();
@@ -10,10 +12,16 @@ export default function LoginView() {
   const tagline = config.brand.tagline;
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const online = useOnline();
 
   const handleGoogleLogin = async () => {
-    setIsLoading(true);
     setErrorMsg("");
+    // Hors connexion évidente : inutile d'ouvrir la fenêtre Google (elle se fermerait avec « cancelled by user »)
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      setErrorMsg(OFFLINE_MESSAGE);
+      return;
+    }
+    setIsLoading(true);
     try {
       const user = await signInWithGoogle();
       if (!user) {
@@ -29,7 +37,10 @@ export default function LoginView() {
       });
     } catch (error: any) {
       console.error(error);
-      setErrorMsg(error instanceof Error ? error.message : String(error || 'Erreur de connexion'));
+      // Le plugin répond « cancelled by user » aussi quand il n'y a pas de réseau : on teste la vraie connectivité
+      // pour afficher la cause probable plutôt que ce message trompeur.
+      const reachable = await probeInternet();
+      setErrorMsg(describeSignInError(error, reachable).message);
     } finally {
       setIsLoading(false);
     }
@@ -53,6 +64,12 @@ export default function LoginView() {
           <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">KWA-WATT</h1>
           <p className="text-slate-500 dark:text-slate-400 mt-2 text-center text-sm">{tagline}</p>
         </div>
+
+        {!online && !errorMsg && (
+          <div role="status" className="mb-4 bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-200 p-3 rounded-xl text-center text-xs font-medium">
+            Vous êtes hors connexion : la connexion avec Google nécessite internet. Vous pouvez continuer en mode visiteur.
+          </div>
+        )}
 
         {errorMsg && (
           <div className="mb-4 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 p-3 rounded-xl text-center text-sm font-medium">

@@ -69,6 +69,11 @@ y compris récupérer une clé d'administrateur Firebase, dans [`docs/CONFIG_A_D
 Voir [`docs/SIGNATURE_DEBUG.md`](./docs/SIGNATURE_DEBUG.md) — la clé de signature debug n'est plus committée
 dans le dépôt et doit être fournie via le secret GitHub `DEBUG_KEYSTORE_B64`.
 
+## Notifications
+
+Alertes persistantes dans la zone de notification Android (bouton « Supprimer », republication à l'ouverture) :
+[`docs/NOTIFICATIONS.md`](./docs/NOTIFICATIONS.md).
+
 ## OCR, logo
 
 - Lecture de photos/captures de SMS : Tesseract.js **embarqué et hors ligne** ; comparatif mesuré avec PaddleOCR et

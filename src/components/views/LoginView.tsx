@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../../store/AppContext';
 import { signInWithGoogle } from '../../lib/firebase';
-import { describeSignInError } from '../../lib/signInErrors';
 import { generateAvatar } from '../../lib/utils';
 import { useRemoteConfig } from '../../store/RemoteConfigContext';
 
@@ -30,8 +29,7 @@ export default function LoginView() {
       });
     } catch (error: any) {
       console.error(error);
-      // Jamais le message brut du plugin natif (« Google Sign-In cancelled by user », y compris sans réseau).
-      setErrorMsg(describeSignInError(error));
+      setErrorMsg(error instanceof Error ? error.message : String(error || 'Erreur de connexion'));
     } finally {
       setIsLoading(false);
     }

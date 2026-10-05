@@ -1,9 +1,9 @@
-import React, { createElement, useState, useEffect, useMemo } from "react";
+import React, { createElement, useState, useEffect } from "react";
 import { useApp } from "../store/AppContext";
 import { useNav, TabValue } from "../store/NavContext";
 import { useRemoteConfig } from "../store/RemoteConfigContext";
 import {
-  Calculator, Home, History, User, Settings, HelpCircle, Plus, Bell, Loader2, CloudOff, Cloud, CloudAlert, Moon, Sun,
+  Calculator, Home, History, User, Settings, HelpCircle, Plus, Loader2, CloudOff, Cloud, CloudAlert, Moon, Sun,
   Menu, LifeBuoy, ClipboardPaste, BatteryCharging, Zap, Wrench, ChevronDown, RefreshCw, Check,
 } from "lucide-react";
 import DashboardView from "./views/DashboardView";
@@ -21,7 +21,6 @@ import CopyableValue from "./ui/CopyableValue";
 import { cn } from "../lib/utils";
 import { Dialog } from '@capacitor/dialog';
 import { getNotificationPermissionState, notificationsSupported, requestNotificationPermission } from "../lib/notifications";
-import { getAlerts } from "../lib/alerts";
 import { useAlertScheduler } from "../hooks/useAlertScheduler";
 import { useClipboard } from "../hooks/useClipboard";
 
@@ -66,12 +65,6 @@ export default function MainLayout() {
 
   // Alertes du jour + rappels de recharge, quel que soit l'onglet ouvert
   useAlertScheduler();
-
-  // Même source que les notifications système : le point du bouton flottant signale une alerte encore active.
-  const alertCount = useMemo(() => {
-    if (!currentUser || !state.settings.alerts?.enableNotifications) return 0;
-    return getAlerts(state, currentMeter).length;
-  }, [currentUser, state, currentMeter]);
 
   // Invite unique pour activer les notifications.
   // IMPORTANT : on interroge l'autorisation du VRAI système (Capacitor). Avant, `Notification.permission` — qui vaut
@@ -277,26 +270,13 @@ export default function MainLayout() {
           </div>
         </div>
 
-        {/* Bouton d'action flottant (mobile) : ajouter recharge / relevé / SMS.
-            ATTENTION : pas de `relative` sur ce bouton — il est en `fixed` et Tailwind génère `.relative` APRÈS
-            `.fixed`, ce qui le ferait repasser en flux normal (pleine largeur). Le repère est donc sur un span interne.
-            La cloche signale une alerte active dans la zone de notification ; plus petite que le bouton. */}
+        {/* Bouton d'action flottant (mobile) : ajouter recharge / relevé / SMS */}
         <button
           onClick={() => setAddSheetOpen(true)}
-          aria-label={alertCount > 0 ? `Ajouter — ${alertCount} alerte${alertCount > 1 ? 's' : ''} en cours` : 'Ajouter'}
+          aria-label="Ajouter"
           className="md:hidden fixed right-4 bottom-24 z-40 bg-orange-500 hover:bg-orange-600 active:scale-95 text-white p-4 rounded-full shadow-xl shadow-orange-500/40 transition-transform"
         >
-          <span className="relative inline-flex">
-            <Plus size={26} />
-            {alertCount > 0 && (
-              <span
-                aria-hidden="true"
-                className="absolute -top-3 -right-3 w-5 h-5 rounded-full bg-white text-orange-600 border border-orange-200 shadow flex items-center justify-center"
-              >
-                <Bell size={12} strokeWidth={2.75} />
-              </span>
-            )}
-          </span>
+          <Plus size={26} />
         </button>
 
         {/* Mobile Bottom Navigation */}

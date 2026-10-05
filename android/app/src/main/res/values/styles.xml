@@ -12,9 +12,6 @@
     <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
-        <!-- @null volontairement : un fond de fenêtre « logo » ici se retrouve derrière les fenêtres de dialogue
-             (l'invite de permission, les BottomSheet) et le logo s'y affiche enTiles. Le fond avant/après le splash est
-             assuré par `android.backgroundColor` (WebView) + le style inline de index.html. -->
         <item name="android:background">@null</item>
     </style>
 
@@ -25,8 +22,5 @@
         <!-- Android 12+ : écran de démarrage système. Sans ces deux lignes, il agrandit l'icône adaptative (PNG) : flou. -->
         <item name="windowSplashScreenBackground">@color/splash_background</item>
         <item name="windowSplashScreenAnimatedIcon">@drawable/splash_icon</item>
-        <!-- Thème appliqué à la sortie du splash (installSplashScreen) : sans lui, Android 12+ peut afficher une fenêtre
-             vide/non stylée entre le splash système et le contenu. -->
-        <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
     </style>
 </resources>

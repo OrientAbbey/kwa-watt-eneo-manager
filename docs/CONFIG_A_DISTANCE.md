@@ -86,8 +86,18 @@ tout — pas besoin de repasser par la console Firebase.
 | `contacts.infoLine` | Numéro SMS gratuit (actuellement 8010) |
 | `contacts.whatsapp` / `whatsappCountryCode` | Numéro WhatsApp du service client et indicatif pays |
 | `contacts.phone` | Numéro d'appel du service client |
-| `ussd.mtnMenu` / `ussd.orangeRecharge` / `ussd.orangeTokenRecall` | Codes composés par les boutons de recharge rapide |
+| `ussd.mtnMenu` / `ussd.orangeMenu` | Menus guidés composés par les boutons « pas à pas » (actuellement `*126*21#` et `#150*314#`) |
+| `ussd.mtnPay` / `ussd.orangePay` | Codes de paiement direct avec **un** `{meter}` et **un** `{amount}`, terminés par `#` (actuellement `*126*2*1*2*{meter}*{amount}#` et `#150*3*1*4*1*{meter}*{amount}#`). Un modèle invalide est ignoré (valeur par défaut). L'app n'injecte que des chiffres saisis et validés. |
+| `ussd.orangeTokenRecall` | Menu Orange pour retrouver un jeton déjà acheté (option 2) |
 | `links[]` | Liens utiles affichés dans l'app (`id`, `label`, `url` en `https://` obligatoire, `description` facultative, `category` parmi `officiel`/`paiement`/`assistance`/`actualites`) |
+
+## ⚠️ Déjà publié un document ? Attention à `links`
+
+Si `app_config/branding` existe déjà dans Firestore, sa liste `links` **remplace entièrement** celle intégrée à
+l'application : les nouveaux liens par défaut (par ex. les pages MTN « payer l'ENEO prépayé » et « frais de paiement »)
+n'apparaîtront **pas** tant que vous ne les avez pas ajoutés. Pour repartir des valeurs par défaut à jour : supprimez
+`scripts/remote-config.seed.json`, relancez le script (il le recrée), relisez-le, puis publiez. L'ancienne clé
+`ussd.orangeRecharge` a été renommée `ussd.orangeMenu` : un document publié avec l'ancien nom retombe sur la valeur par défaut.
 
 ## Vérifier que ça a fonctionné
 

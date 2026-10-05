@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- GÉNÉRÉ par docs/logo/gen_android_vectors.py — ne pas modifier à la main. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="240dp"
+    android:height="240dp"
+    android:viewportWidth="1024"
+    android:viewportHeight="1024">
+    <group
+        android:pivotX="512"
+        android:pivotY="512"
+        android:scaleX="0.8"
+        android:scaleY="0.8">
+        <!-- piste de la jauge -->
+        <path
+            android:pathData="M278.7,745.3 A330,330 0 1 1 745.3,745.3"
+            android:strokeColor="#29FFFFFF"
+            android:strokeWidth="64"
+            android:strokeLineCap="round" />
+        <!-- crédit restant -->
+        <path
+            android:pathData="M278.7,745.3 A330,330 0 1 1 779.3,318.5"
+            android:strokeColor="#FFFA991D"
+            android:strokeWidth="64"
+            android:strokeLineCap="round" />
+        <!-- éclair -->
+        <group
+            android:pivotX="512"
+            android:pivotY="515"
+            android:scaleX="0.66"
+            android:scaleY="0.66"
+            android:translateY="11">
+            <path
+                android:fillColor="#FFFFFFFF"
+                android:pathData="M455,90 L300,560 L470,560 L400,940 L735,430 L560,430 L665,90 Z" />
+        </group>
+    </group>
+</vector>

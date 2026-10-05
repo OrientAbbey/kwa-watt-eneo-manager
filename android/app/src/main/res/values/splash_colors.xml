@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Indigo de la marque : identique à backgroundColor du splash dans capacitor.config.ts -->
+    <color name="splash_background">#1E1B4B</color>
+</resources>

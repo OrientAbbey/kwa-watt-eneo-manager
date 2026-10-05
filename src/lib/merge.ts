@@ -1,4 +1,5 @@
-import { AppState, Consumption, EmergencyCredit, MeterData, Recharge } from "../types";
+import { AppState, Consumption, EmergencyCredit, MeterData, Recharge, UserProfile } from "../types";
+import { PHOTO_FIELDS } from "./photos";
 
 /**
  * Fusion multi-appareils sans serveur : « dernier modifié gagne » PAR ENREGISTREMENT (et non plus pour tout
@@ -46,12 +47,27 @@ function dedupeByDate<T extends { id: string; date: string; updatedAt?: number }
   return [...byDate.values()];
 }
 
+/**
+ * Les photos ne sont JAMAIS dans le document distant (elles sont synchronisées à part) : un profil distant plus récent
+ * ne doit donc jamais effacer les photos locales. On les reprend toujours du côté local (puis du distant à défaut).
+ */
+function mergeProfile(newer: UserProfile, local: UserProfile, remote: UserProfile): UserProfile {
+  const profile: UserProfile = { ...newer };
+  for (const f of PHOTO_FIELDS) {
+    const v = local[f] ?? remote[f];
+    if (v) profile[f] = v;
+    else delete profile[f];
+  }
+  return profile;
+}
+
 function mergeMeter(local: MeterData, remote: MeterData, now: number): MeterData {
   const tombstones = mergeTombstones(local.tombstones, remote.tombstones, now);
   const newer = ts(local) >= ts(remote) ? local : remote;
   return {
     ...newer,
     id: local.id,
+    profile: mergeProfile(newer.profile, local.profile, remote.profile),
     consumptions: dedupeByDate(mergeRecords<Consumption>(local.consumptions, remote.consumptions, tombstones)),
     // Plusieurs recharges le même jour sont légitimes côté cloud → pas de dédoublonnage par date ici.
     recharges: mergeRecords<Recharge>(local.recharges, remote.recharges, tombstones),
@@ -59,6 +75,14 @@ function mergeMeter(local: MeterData, remote: MeterData, now: number): MeterData
     tombstones,
     updatedAt: Math.max(ts(local), ts(remote)),
   };
+}
+
+const isData = (s: string) => typeof s === "string" && s.startsWith("data:");
+
+function mergeHelpImages(local: string[], remote: string[], localWins: boolean): string[] {
+  const localData = local.filter(isData);
+  const urls = (localWins ? local : remote).filter((s) => !isData(s));
+  return [...urls, ...localData];
 }
 
 export function mergeStates(local: AppState, remote: AppState, now = Date.now()): AppState {
@@ -89,8 +113,8 @@ export function mergeStates(local: AppState, remote: AppState, now = Date.now())
     activeMeterId, // le compteur actif est une préférence propre à l'appareil
     deletedMeters,
     updatedAt: Math.max(ts(local), ts(remote)),
-    // Les images d'aide sont un contenu de l'appareil le plus récent
-    helpImages: settingsSource.helpImages,
+    // Images d'aide : les photos (data:) sont toujours locales ; seules d'éventuelles images distantes par URL se fusionnent
+    helpImages: mergeHelpImages(local.helpImages, remote.helpImages, settingsSource === local),
   };
 }
 

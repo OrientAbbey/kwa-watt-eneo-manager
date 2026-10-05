@@ -17,6 +17,30 @@ body {
 }
 
 @layer utilities {
+  /* Barre de défilement TOUJOURS visible (sur Android les barres « overlay » disparaissent d'elles-mêmes, ce qui laisse
+     croire qu'un long texte n'est pas défilable). On n'utilise volontairement que les pseudo-éléments -webkit- : dès que
+     `scrollbar-width` / `scrollbar-color` sont définis, Chromium ignore ces pseudo-éléments. */
+  .scrollbar-visible {
+    overflow-y: scroll;
+  }
+  .scrollbar-visible::-webkit-scrollbar {
+    width: 12px;
+  }
+  .scrollbar-visible::-webkit-scrollbar-track {
+    background: rgba(148, 163, 184, 0.2);
+    border-radius: 8px;
+  }
+  .scrollbar-visible::-webkit-scrollbar-thumb {
+    background: #94a3b8;
+    border-radius: 8px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  .scrollbar-visible::-webkit-scrollbar-thumb:hover {
+    background: #64748b;
+    background-clip: padding-box;
+  }
+
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }

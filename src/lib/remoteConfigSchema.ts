@@ -43,8 +43,15 @@ export interface RemoteConfig {
     phone: string;
   };
   ussd: {
+    /** Menu guidé MTN MoMo (l'utilisateur suit les étapes : option 2 « Prepaid ENEO invoice »). */
     mtnMenu: string;
-    orangeRecharge: string;
+    /** Code direct MTN avec `{meter}` et `{amount}` à remplacer (ex. *126*2*1*2*{meter}*{amount}#). */
+    mtnPay: string;
+    /** Menu guidé Orange Money (option 1 « Recharge prépayée »). */
+    orangeMenu: string;
+    /** Code direct Orange avec `{meter}` et `{amount}` (ex. #150*3*1*4*1*{meter}*{amount}#). */
+    orangePay: string;
+    /** Menu Orange pour retrouver un jeton déjà acheté (option 2). */
     orangeTokenRecall: string;
   };
   links: UsefulLink[];
@@ -68,8 +75,10 @@ export const DEFAULT_REMOTE_CONFIG: RemoteConfig = {
     phone: "+237233430033",
   },
   ussd: {
-    mtnMenu: "*126#",
-    orangeRecharge: "#150*314*1#",
+    mtnMenu: "*126*21#",
+    mtnPay: "*126*2*1*2*{meter}*{amount}#",
+    orangeMenu: "#150*314#",
+    orangePay: "#150*3*1*4*1*{meter}*{amount}#",
     orangeTokenRecall: "#150*314#",
   },
   links: [
@@ -78,6 +87,9 @@ export const DEFAULT_REMOTE_CONFIG: RemoteConfig = {
     { id: "guide-pdf", label: "Guide d'utilisation du compteur (PDF)", url: "https://eneocameroon.cm/images/GUCPP_FR_12012023_x_DISI_x_SDCOM_x_2023.pdf", description: "Mode d'emploi complet de l'interface CIU", category: "officiel" },
     { id: "faq-pdf", label: "FAQ solution prépayée (PDF)", url: "https://www.eneocameroon.cm/images/FAQs_Solution_Prpaye_dEneo_Fr_0821.pdf", description: "Réponses aux questions fréquentes", category: "assistance" },
     { id: "tid", label: "Mise à jour TID du compteur", url: "https://eneocameroon.cm/index.php/fr/mise-a-jour-tid-des-compteurs-prepaye-faqs", description: "Procédure officielle et FAQ (STS édition 1 → 2)", category: "assistance" },
+    { id: "mtn-eneo-prepaid", label: "MTN MoMo : payer l'ENEO prépayé", url: "https://mtn.cm/fr/helppersonal/eneo-prepaid-bill-payment/", description: "Procédure officielle MTN (code *126*21#, option 2)", category: "paiement" },
+    { id: "mtn-fees", label: "MTN MoMo : frais de paiement des factures", url: "https://mtn.cm/fr/helppersonal/bill-payment-fees/", description: "Grille des frais ajoutés à un achat de kWh", category: "paiement" },
+    { id: "mtn-token", label: "MTN MoMo : récupérer un token Eneo", url: "https://mtn.cm/fr/helppersonal/eneo-token-recovery/", description: "Jeton perdu ou non reçu", category: "assistance" },
     { id: "myeasylight", label: "Portail MyEasyLight (factures, paiement)", url: "https://my.eneocameroon.cm/", description: "Agence en ligne", category: "paiement" },
     { id: "arsel", label: "ARSEL — régulateur de l'électricité", url: "https://arsel-cm.org", description: "Tarifs réglementés, droits des consommateurs", category: "officiel" },
     { id: "x", label: "Communiqués et coupures programmées (X)", url: "https://x.com/InsideEneo", description: "Annonces de travaux et coupures par quartier", category: "actualites" },
@@ -88,6 +100,16 @@ const isHttps = (u: unknown): u is string => typeof u === "string" && /^https:\/
 const str = (v: unknown, fallback: string, max = 200) => (typeof v === "string" && v.trim() ? v.trim().slice(0, max) : fallback);
 const num = (v: unknown, fallback: number) => (typeof v === "number" && Number.isFinite(v) && v > 0 ? v : fallback);
 const ussd = (v: unknown, fallback: string) => (typeof v === "string" && /^[*#0-9]{2,30}$/.test(v) ? v : fallback);
+/** Modèle de code direct : chiffres, * et #, avec exactement un {meter} et un {amount}, terminé par #. */
+const ussdTemplate = (v: unknown, fallback: string) =>
+  typeof v === "string" &&
+  v.length <= 60 &&
+  /^(?:[*#0-9]|\{meter\}|\{amount\})+$/.test(v) &&
+  v.split("{meter}").length === 2 &&
+  v.split("{amount}").length === 2 &&
+  v.endsWith("#")
+    ? v
+    : fallback;
 const digits = (v: unknown, fallback: string) => (typeof v === "string" && /^\+?[0-9]{2,15}$/.test(v) ? v : fallback);
 const CATEGORIES: LinkCategory[] = ["officiel", "paiement", "assistance", "actualites"];
 
@@ -125,7 +147,9 @@ export function sanitizeRemoteConfig(raw: unknown): RemoteConfig {
     },
     ussd: {
       mtnMenu: ussd(r.ussd?.mtnMenu, d.ussd.mtnMenu),
-      orangeRecharge: ussd(r.ussd?.orangeRecharge, d.ussd.orangeRecharge),
+      mtnPay: ussdTemplate(r.ussd?.mtnPay, d.ussd.mtnPay),
+      orangeMenu: ussd(r.ussd?.orangeMenu, d.ussd.orangeMenu),
+      orangePay: ussdTemplate(r.ussd?.orangePay, d.ussd.orangePay),
       orangeTokenRecall: ussd(r.ussd?.orangeTokenRecall, d.ussd.orangeTokenRecall),
     },
     links: links.length > 0 ? links : d.links,

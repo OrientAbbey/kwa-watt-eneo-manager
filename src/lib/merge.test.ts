@@ -98,4 +98,17 @@ describe("mergeStates", () => {
     expect(statesEqual(mergeStates(once, b, NOW), once)).toBe(true);
     expect(statesEqual(mergeStates(once, once, NOW), once)).toBe(true);
   });
+
+  it("un profil distant plus récent n'efface JAMAIS les photos locales (les photos ne sont pas dans le cloud)", () => {
+    const local = state([meter({ id: "m1", updatedAt: 10, profile: { ...INITIAL_STATE.meters[0].profile, ownerName: "Ancien", photoMeter: "data:image/jpeg;base64,LOCAL" } })]);
+    const remote = state([meter({ id: "m1", updatedAt: NOW - 10, profile: { ...INITIAL_STATE.meters[0].profile, ownerName: "Nouveau" } })]);
+    const merged = mergeStates(local, remote, NOW);
+    expect(merged.meters[0].profile.ownerName).toBe("Nouveau");
+    expect(merged.meters[0].profile.photoMeter).toBe("data:image/jpeg;base64,LOCAL");
+  });
+  it("conserve les images d'aide locales même si les réglages distants sont plus récents", () => {
+    const local = state([meter()], { helpImages: ["data:image/jpeg;base64,H1"], updatedAt: 5 });
+    const remote = state([meter()], { helpImages: [], updatedAt: NOW - 5 });
+    expect(mergeStates(local, remote, NOW).helpImages).toEqual(["data:image/jpeg;base64,H1"]);
+  });
 });

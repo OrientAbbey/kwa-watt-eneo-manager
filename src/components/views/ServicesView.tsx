@@ -7,11 +7,10 @@ import MeterCodesCard from "../features/MeterCodesCard";
 import TidDiagnosticCard from "../features/TidDiagnosticCard";
 import InvoiceChannelCard from "../features/InvoiceChannelCard";
 import OutagesCard from "../features/OutagesCard";
-import UsefulLinksCard from "../features/UsefulLinksCard";
 
 /** Tout ce qui est propre au compteur prépayé et à l'opérateur, réuni en un seul onglet. */
 export default function ServicesView() {
-  const { consumeIntent } = useNav();
+  const { consumeIntent, navigate, intentTick } = useNav();
   const { brand } = useRemoteConfig();
 
   useEffect(() => {
@@ -22,7 +21,7 @@ export default function ServicesView() {
       return () => clearTimeout(t);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [intentTick]);
 
   return (
     <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300 pb-10">
@@ -40,7 +39,13 @@ export default function ServicesView() {
         <div className="space-y-6">
           <MeterCodesCard />
           <TidDiagnosticCard />
-          <UsefulLinksCard />
+          <button
+            onClick={() => navigate("help", { type: "focus", section: "useful-links" })}
+            className="w-full text-left rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+          >
+            <p className="font-semibold text-slate-800 dark:text-slate-100">Guides et liens utiles</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Sites officiels, procédures MTN / Orange, frais de paiement : dans l'onglet Aide →</p>
+          </button>
         </div>
       </div>
     </div>

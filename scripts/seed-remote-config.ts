@@ -91,8 +91,11 @@ async function main() {
     return;
   }
 
-  const app = getApps().length ? getApps()[0]! : initializeApp({ credential: applicationDefault(), projectId: readProjectId() });
-  await getFirestore(app).doc(DOC_PATH).set(config);
+const app = getApps().length ? getApps()[0]! : initializeApp({ credential: applicationDefault(), projectId: readProjectId() });
+  // Firestore refuse d'écrire `undefined` : sanitizeRemoteConfig laisse `tariffs` (et la `description` d'un lien
+  // qui n'en a pas) à `undefined`, on supprime donc ces clés avant l'écriture (elles resteront absentes du document).
+  const clean = JSON.parse(JSON.stringify(config)) as Record<string, unknown>;
+  await getFirestore(app).doc(DOC_PATH).set(clean);
   console.log(`\n✅ ${DOC_PATH} publié. Les appareils déjà installés le récupéreront sous 24h (durée du cache local),`);
   console.log("   ou immédiatement après avoir vidé les données de l'application / réinstallé.\n");
 }

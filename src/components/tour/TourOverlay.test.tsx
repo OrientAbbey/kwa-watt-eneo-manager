@@ -119,14 +119,35 @@ describe("visite guidée : affichage et navigation entre les étapes", () => {
   it("met en surbrillance le VRAI élément ciblé (position = celle de l'élément + marge)", async () => {
     renderApp();
     await start();
-    next(); // tableau de bord → [data-tour="metrics"] à (120, 16, 360×300)
+    next(); // tableau de bord → carte du solde [data-tour="balance"] à (120, 16, 360×90)
     const spot = await screen.findByTestId("tour-spotlight");
     expect(spot.style.top).toBe("114px");
     expect(spot.style.left).toBe("10px");
     expect(spot.style.width).toBe("372px");
-    expect(spot.style.height).toBe("312px");
+    expect(spot.style.height).toBe("102px");
     // le mouvement de la surbrillance respecte prefers-reduced-motion
     expect(spot.className).toContain("motion-reduce:transition-none");
+  });
+
+  it("carte plus haute que l'écran : surbrillance limitée à sa partie haute, alignée en haut, bulle dessous", async () => {
+    const scroll = vi.fn();
+    Element.prototype.scrollIntoView = scroll;
+    render(
+      <NavProvider>
+        <TourProvider>
+          <Probe />
+          <Launchers />
+          <div id="quick-recharge" data-rect="64,16,360,3000" />
+        </TourProvider>
+      </NavProvider>
+    );
+    const dialog = await start();
+    for (let i = 0; i < 3; i++) next(); // étape « Recharger par codes courts » (#quick-recharge, 3000 px de haut)
+    const spot = await screen.findByTestId("tour-spotlight");
+    expect(parseInt(spot.style.height, 10)).toBeLessThanOrEqual(Math.round(window.innerHeight * 0.4) + 12);
+    await waitFor(() => expect(dialog.getAttribute("data-placement")).toBe("bottom"));
+    expect(scroll).toHaveBeenCalledWith(expect.objectContaining({ block: "start" }));
+    delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView;
   });
 
   it("deux variantes d'un même bouton (mobile / bureau) : seule la VISIBLE est mise en avant", async () => {

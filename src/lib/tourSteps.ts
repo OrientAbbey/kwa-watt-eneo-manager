@@ -53,9 +53,9 @@ export const TOURS: Record<TourId, TourDef> = {
       {
         id: "dashboard",
         title: "Votre tableau de bord",
-        body: "Ici : l'énergie restante estimée, la consommation du mois et la date estimée de fin de crédit. Ce sont des estimations calculées à partir de vos recharges et relevés.",
+        body: "Voici l'énergie restante estimée. Juste en dessous : la consommation du mois et la date estimée de fin de crédit. Ce sont des estimations calculées à partir de vos recharges et relevés.",
         tab: "dashboard",
-        targets: ['[data-tour="metrics"]'],
+        targets: ['[data-tour="balance"]'],
       },
       {
         id: "add",

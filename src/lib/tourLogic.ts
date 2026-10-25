@@ -114,6 +114,22 @@ export const toRect = (r: { top: number; left: number; width: number; height: nu
   height: r.height,
 });
 
+/** Part maximale de la hauteur de l'écran qu'une surbrillance peut occuper. */
+export const MAX_SPOTLIGHT_RATIO = 0.4;
+
+/**
+ * Une cible plus haute que ~40 % de l'écran (grande carte) couvrirait tout et ne laisserait pas de place à la bulle :
+ * on n'en met en avant que la partie HAUTE (celle qui contient le titre).
+ */
+export function capTargetHeight(target: Rect, viewport: Size, ratio = MAX_SPOTLIGHT_RATIO): Rect {
+  const max = Math.round(viewport.height * ratio);
+  return target.height > max ? { ...target, height: max } : target;
+}
+
+/** Une cible haute est alignée sur le HAUT de la zone défilante (sinon son titre sortirait de l'écran) ; sinon centrée. */
+export const scrollBlockFor = (target: Pick<Rect, "height">, viewport: Size): "start" | "center" =>
+  target.height > viewport.height * MAX_SPOTLIGHT_RATIO ? "start" : "center";
+
 /** Zone mise en surbrillance : la cible élargie d'une marge, ramenée dans l'écran. */
 export function spotlightRect(target: Rect, viewport: Size, pad = 6): Rect {
   const left = Math.max(0, target.left - pad);

@@ -2,6 +2,7 @@ import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useNav } from "../../store/NavContext";
 import { TOURS, type TourStep } from "../../lib/tourSteps";
 import {
+  capTargetHeight,
   clampIndex,
   computePopoverPosition,
   dismissOpenOverlays,
@@ -9,6 +10,7 @@ import {
   isSyntheticEscape,
   navKey,
   pickTarget,
+  scrollBlockFor,
   spotlightRect,
   toRect,
   type PopoverPosition,
@@ -52,7 +54,10 @@ function useTargetRect(step: TourStep) {
       if (current !== el) {
         el = current;
         // Amène la cible dans la zone visible (instantané : la mesure suivante voit la position finale)
-        (el as HTMLElement).scrollIntoView?.({ block: "center", inline: "nearest" });
+        (el as HTMLElement).scrollIntoView?.({
+          block: scrollBlockFor(el.getBoundingClientRect(), { width: window.innerWidth, height: window.innerHeight }),
+          inline: "nearest",
+        });
       }
       const rect = toRect(el.getBoundingClientRect());
       setState((s) => (s.settled && sameRect(s.rect, rect) ? s : { rect, settled: true }));
@@ -105,7 +110,7 @@ export default function TourOverlay({ active }: { active: ActiveTour }) {
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  const spot = rect ? spotlightRect(rect, viewport) : null;
+  const spot = rect ? spotlightRect(capTargetHeight(rect, viewport), viewport) : null;
   const popRef = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<PopoverPosition | null>(null);
 

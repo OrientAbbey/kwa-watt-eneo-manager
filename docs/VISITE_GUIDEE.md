@@ -8,7 +8,8 @@ Présentation de l'application au premier lancement, rejouable à tout moment de
 - **Visite complète** : 9 étapes (bienvenue, tableau de bord, bouton « + », recharge par codes, crédit 811, codes du
   compteur / TID, import de SMS, notifications, menu / profil / synchronisation).
 - **4 mini-visites par thème** : Enregistrer une recharge, Importer un SMS, Notifications, Crédit d'urgence.
-- Surbrillance du VRAI élément (pas de capture) ; si la cible n'existe pas (ex. la cloche sans alerte), la bulle devient
+- Surbrillance du VRAI élément (pas de capture) ; une cible plus haute que 40 % de l'écran (grande carte) n'est mise en avant
+  que dans sa partie haute et alignée en haut de la zone défilante, pour laisser la place à la bulle ; si la cible n'existe pas (ex. la cloche sans alerte), la bulle devient
   une carte centrée avec un texte de repli.
 - Boutons Suivant / Précédent / Passer, points de progression, **Échap** pour quitter, flèches ← → pour naviguer.
 - Accessibilité : fenêtre modale (`role="dialog"`, `aria-modal`), titre et texte reliés, annonce vocale du changement
@@ -82,8 +83,10 @@ Surcoût mesuré avec `node scripts/bundle-size.mjs` (gzip niveau 9, hors moteur
 
 ## Limites connues
 
-- Vérifié par tests automatisés (jsdom : étapes, navigation, intents, clavier, focus, persistance) et par les tests de
-  position. **Non vérifié sur téléphone** : rendu réel de la surbrillance, animations d'arrivée des vues pendant la
+- Vérifié par tests automatisés (jsdom : étapes, navigation, intents, clavier, focus, persistance), par les tests de
+  position, et **visuellement** dans Chromium headless à 412 × 915 (les 9 étapes, `node scripts/screenshots.mjs <dossier>
+  --tour-steps` ; ce contrôle a révélé deux étapes dont la bulle masquait le titre de la carte, corrigées).
+  **Non vérifié sur téléphone** : rendu réel de la surbrillance, animations d'arrivée des vues pendant la
   mesure, comportement avec le clavier virtuel ouvert.
 - Le bouton « Retour » matériel d'Android n'est pas intercepté : il quitte l'application comme d'habitude.
 - Mini-visite « Enregistrer une recharge » : elle ouvre le formulaire vide ; il se referme en changeant d'onglet.

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
-  TOUR_SEEN_KEY, clampIndex, computePopoverPosition, decideTourOffer, hasUserData, navKey, pickTarget, readTourSeen, spotlightRect, writeTourSeen,
+  TOUR_SEEN_KEY, capTargetHeight, clampIndex, scrollBlockFor, computePopoverPosition, decideTourOffer, hasUserData, navKey, pickTarget, readTourSeen, spotlightRect, writeTourSeen,
   type Rect,
 } from "./tourLogic";
 
@@ -122,6 +122,25 @@ describe("spotlightRect", () => {
     const r = spotlightRect({ top: 780, left: 380, width: 60, height: 60 }, vp);
     expect(r.left + r.width).toBeLessThanOrEqual(400);
     expect(r.top + r.height).toBeLessThanOrEqual(800);
+  });
+});
+
+describe("grandes cibles (carte plus haute que l'écran)", () => {
+  const vp = { width: 400, height: 800 };
+  it("ne met en avant que la partie haute d'une cible trop haute (≤ 40 % de l'écran)", () => {
+    expect(capTargetHeight({ top: 64, left: 16, width: 368, height: 2000 }, vp)).toEqual({ top: 64, left: 16, width: 368, height: 320 });
+  });
+  it("laisse intacte une cible de taille raisonnable", () => {
+    const r = { top: 100, left: 16, width: 368, height: 200 };
+    expect(capTargetHeight(r, vp)).toBe(r);
+  });
+  it("aligne une cible haute sur le haut de la zone défilante, centre les autres", () => {
+    expect(scrollBlockFor({ height: 2000 }, vp)).toBe("start");
+    expect(scrollBlockFor({ height: 90 }, vp)).toBe("center");
+  });
+  it("après plafonnement, la bulle trouve de la place sous la partie mise en avant", () => {
+    const capped = capTargetHeight({ top: 64, left: 16, width: 368, height: 2000 }, vp);
+    expect(computePopoverPosition(capped, { width: 300, height: 220 }, vp).placement).toBe("bottom");
   });
 });
 

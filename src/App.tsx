@@ -6,6 +6,7 @@
 import { AppProvider } from "./store/AppContext";
 import { NavProvider } from "./store/NavContext";
 import { RemoteConfigProvider } from "./store/RemoteConfigContext";
+import { TourProvider } from "./components/tour/TourContext";
 import MainLayout from "./components/MainLayout";
 import { useEffect } from "react";
 import { markAppReady } from "./lib/appReady";
@@ -17,7 +18,9 @@ export default function App() {
     <RemoteConfigProvider>
       <AppProvider>
         <NavProvider>
-          <MainLayout />
+          <TourProvider>
+            <MainLayout />
+          </TourProvider>
         </NavProvider>
       </AppProvider>
     </RemoteConfigProvider>

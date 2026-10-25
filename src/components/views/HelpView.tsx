@@ -11,6 +11,7 @@ import ExternalLink from '../ui/ExternalLink';
 import { MONETARY_UNIT } from '../../lib/utils';
 import { OCR_ENGINE_INFO } from '../../lib/ocr';
 import { useNav } from '../../store/NavContext';
+import AboutCard from '../features/AboutCard';
 
 export default function HelpView() {
   const { state, updateHelpImages } = useApp();
@@ -46,6 +47,8 @@ export default function HelpView() {
         <HelpCircle size={28} />
         <h2 className="text-2xl font-bold">Aide & Informations</h2>
       </div>
+
+      <AboutCard />
 
       <UsefulLinksCard />
 

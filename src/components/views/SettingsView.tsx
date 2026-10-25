@@ -6,6 +6,7 @@ import { DEFAULT_SETTINGS, DEFAULT_ALERTS } from '../../constants';
 import { MONETARY_UNIT } from '../../lib/utils';
 import { Dialog } from '@capacitor/dialog';
 import { NotificationPermissionState, getNotificationPermissionState, notificationsSupported, requestNotificationPermission, sendTestNotification } from '../../lib/notifications';
+import TourLauncher from '../tour/TourLauncher';
 
 export default function SettingsView() {
   const { state, updateSettings, resetData, showToast } = useApp();
@@ -224,7 +225,7 @@ export default function SettingsView() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card data-tour="settings-alerts">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center"><Bell size={18} className="mr-2"/> Alertes et Export</CardTitle>
@@ -409,6 +410,16 @@ export default function SettingsView() {
                </label>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card id="settings-tour">
+        <CardHeader>
+          <CardTitle>Visite guidée</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Revoyez la présentation de l'application, en entier ou par thème. Vos données ne sont pas modifiées.</p>
+          <TourLauncher />
         </CardContent>
       </Card>
 

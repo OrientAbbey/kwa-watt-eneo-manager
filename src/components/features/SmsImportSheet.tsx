@@ -125,7 +125,7 @@ export default function SmsImportSheet({ open, onClose, onParsed }: SmsImportShe
           Collez le SMS de confirmation (même reçu sur un autre téléphone) ou photographiez-le. Vous pourrez tout vérifier avant d'enregistrer.
         </p>
 
-        <div className="grid grid-cols-2 gap-2">
+        <div data-tour="sms-actions" className="grid grid-cols-2 gap-2">
           <button onClick={paste} disabled={ocrBusy} className="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 text-sm font-semibold hover:bg-indigo-100 dark:hover:bg-indigo-900/40 disabled:opacity-40 disabled:cursor-not-allowed">
             <ClipboardPaste size={16} /> Coller
           </button>
@@ -141,6 +141,7 @@ export default function SmsImportSheet({ open, onClose, onParsed }: SmsImportShe
         )}
 
         <textarea
+          data-tour="sms-text"
           value={text}
           onChange={(e) => setText(e.target.value)}
           readOnly={ocrBusy}

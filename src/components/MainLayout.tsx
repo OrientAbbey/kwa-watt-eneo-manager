@@ -25,6 +25,7 @@ import { useAlertScheduler } from "../hooks/useAlertScheduler";
 import { useClipboard } from "../hooks/useClipboard";
 import { useActiveAlerts } from "../hooks/useActiveAlerts";
 import NotificationBell from "./features/NotificationBell";
+import TourGate from "./tour/TourGate";
 
 const NOTIF_ASKED_KEY = 'kwawatt_notif_asked';
 
@@ -196,7 +197,7 @@ export default function MainLayout() {
     <div className="flex h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 overflow-hidden font-sans transition-colors">
 
       {/* Sidebar (Desktop/Tablet) */}
-      <aside className="w-64 bg-indigo-950 dark:bg-slate-950 hidden md:flex flex-col h-full shrink-0 shadow-xl z-20">
+      <aside data-tour="sidebar" className="w-64 bg-indigo-950 dark:bg-slate-950 hidden md:flex flex-col h-full shrink-0 shadow-xl z-20">
         <div className="p-6 mb-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center overflow-hidden shadow-sm">
@@ -224,6 +225,7 @@ export default function MainLayout() {
           <div className="flex items-center gap-2 flex-1 min-w-0">
             <button
               onClick={() => setDrawerOpen(true)}
+              data-tour="menu"
               aria-label="Ouvrir le menu"
               className="md:hidden shrink-0 text-slate-600 dark:text-slate-300 p-2 -ml-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
             >
@@ -257,6 +259,7 @@ export default function MainLayout() {
 
             <button
               onClick={() => setAddSheetOpen(true)}
+              data-tour="add-header"
               className="hidden md:flex bg-orange-500 hover:bg-orange-600 text-white px-5 py-2.5 rounded-lg font-bold items-center gap-2 shadow-lg shadow-orange-500/20 transition-all"
             >
               <Plus size={18} /> Ajouter
@@ -284,6 +287,7 @@ export default function MainLayout() {
         {/* Bouton d'action flottant (mobile) : ajouter recharge / relevé / SMS */}
         <button
           onClick={() => setAddSheetOpen(true)}
+          data-tour="add-fab"
           aria-label="Ajouter"
           className="md:hidden fixed right-4 bottom-24 z-40 bg-orange-500 hover:bg-orange-600 active:scale-95 text-white p-4 rounded-full shadow-xl shadow-orange-500/40 transition-transform"
         >
@@ -420,6 +424,9 @@ export default function MainLayout() {
           ))}
         </ul>
       </BottomSheet>
+
+      {/* Visite guidée : démarrage automatique (nouvel utilisateur) ou proposition (utilisateur existant) */}
+      <TourGate />
 
       {/* Global Loading Overlay */}
       {isLoading && (

@@ -80,6 +80,10 @@ Alertes persistantes dans la zone de notification Android (bouton « Supprimer �
   EasyOCR dans [`docs/OCR_COMPARATIF.md`](./docs/OCR_COMPARATIF.md) (banc d'essai reproductible dans `docs/ocr-benchmark/`).
 - Logo (remplace celui de Flet) et pistes alternatives : [`docs/LOGO.md`](./docs/LOGO.md).
 
+## Visite guidée
+
+Présentation interactive au premier lancement, rejouable depuis Aide → À propos et Paramètres : [`docs/VISITE_GUIDEE.md`](./docs/VISITE_GUIDEE.md).
+
 ## Synchronisation cloud
 
 Voir [`docs/SYNC_ET_REGLES.md`](./docs/SYNC_ET_REGLES.md) — modèle de données, fusion multi-appareils, et

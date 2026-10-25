@@ -6,6 +6,32 @@ Application de gestion de l'électricité prépayée ENEO : suivi de la consomma
 - **Mobile** : Capacitor 8 (Android · applicationId `com.eneotool.app`)
 - **Backend** : projet Firebase dédié **`kwa-watt-eneo-manager`** (`186942591566`) — Google Auth + Firestore `(default)` en `europe-west1`, règles déjà déployées
 
+## Captures d'écran
+
+Données de démonstration fictives, rendu Chromium (pas une WebView Android : voir [`docs/CAPTURES.md`](./docs/CAPTURES.md)).
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/screenshots/tableau-de-bord.webp" width="200" alt="Tableau de bord : énergie restante estimée, consommation du mois et prédiction de fin de crédit"><br><sub>Tableau de bord</sub></td>
+    <td align="center"><img src="docs/screenshots/calcul.webp" width="200" alt="Outil de calcul : montant vers kWh selon la tranche tarifaire"><br><sub>Calcul et simulateur de tranche</sub></td>
+    <td align="center"><img src="docs/screenshots/historique.webp" width="200" alt="Historique des consommations et des recharges"><br><sub>Historique</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/screenshots/services-recharge.webp" width="200" alt="Onglet Services : recharge par MTN MoMo ou Orange Money"><br><sub>Services : recharge par codes</sub></td>
+    <td align="center"><img src="docs/screenshots/credit-urgence.webp" width="200" alt="Crédit d'urgence 811 suivi comme une dette de kWh à rembourser"><br><sub>Crédit d'urgence 811</sub></td>
+    <td align="center"><img src="docs/screenshots/import-sms.webp" width="200" alt="Import d'une recharge depuis un SMS : valeurs reconnues et contrôles du compteur"><br><sub>Import depuis un SMS</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/screenshots/notifications.webp" width="200" alt="Cloche de notifications et liste des alertes en cours"><br><sub>Cloche de notifications</sub></td>
+    <td align="center"><img src="docs/screenshots/mode-sombre.webp" width="200" alt="Tableau de bord en mode sombre"><br><sub>Mode sombre</sub></td>
+    <td align="center"><img src="docs/screenshots/tiroir-navigation.webp" width="200" alt="Tiroir de navigation : tableau de bord, profil, paramètres, aide"><br><sub>Tiroir de navigation</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/screenshots/visite-guidee.webp" width="200" alt="Visite guidée : surbrillance de la carte du solde avec explication"><br><sub>Visite guidée</sub></td>
+    <td align="center" colspan="2"><img src="docs/screenshots/grand-ecran.webp" width="420" alt="Application sur grand écran : barre latérale et tableau de bord"><br><sub>Grand écran</sub></td>
+  </tr>
+</table>
+
 ## Prérequis
 
 - Node.js 20+
@@ -83,6 +109,10 @@ Alertes persistantes dans la zone de notification Android (bouton « Supprimer �
 ## Visite guidée
 
 Présentation interactive au premier lancement, rejouable depuis Aide → À propos et Paramètres : [`docs/VISITE_GUIDEE.md`](./docs/VISITE_GUIDEE.md).
+
+## Captures
+
+Régénérables avec `node scripts/screenshots.mjs` : [`docs/CAPTURES.md`](./docs/CAPTURES.md).
 
 ## Synchronisation cloud
 

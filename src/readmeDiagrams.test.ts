@@ -12,7 +12,7 @@ const blocks = [...readme.matchAll(/```mermaid\n([\s\S]*?)```/g)].map((m) => m[1
 
 describe("diagrammes Mermaid du README", () => {
   it("il y a un fichier source par diagramme demandé", () => {
-    expect(sources).toEqual(["architecture.mmd", "ci-cd.mmd", "import-sms.mmd", "modele-donnees.mmd", "notifications.mmd", "synchronisation.mmd"]);
+    expect(sources).toEqual(["architecture.mmd", "ci-cd.mmd", "import-sms.mmd", "modele-donnees.mmd", "notifications.mmd", "release-apk.mmd", "synchronisation.mmd"]);
   });
   it("le README intègre chaque source docs/diagrams/*.mmd à l'identique (pas de dérive entre les deux)", () => {
     for (const f of sources) {

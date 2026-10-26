@@ -1,0 +1,22 @@
+flowchart TD
+  A["Bouton +, Depuis un SMS<br/>ou carte Services"] --> B["Fenêtre d'import"]
+  B --> C1["Coller le SMS"]
+  B --> C2["Photo ou capture"]
+  C2 --> OCR["OCR Tesseract<br/>hors ligne"]
+  C1 --> T["Texte du SMS"]
+  OCR --> T
+  T --> P["parseRechargeSms<br/>montant, kWh, date, référence,<br/>reçu, compteur, frais"]
+  P --> M{"Compteur<br/>du SMS ?"}
+  M -- "autre" --> M1["Proposer de basculer"]
+  M -- "inconnu" --> M2["Avertir"]
+  M -- "actif" --> U
+  M1 --> U
+  M2 --> U
+  U{"Prix par kWh<br/>cohérent ?"}
+  U -- non --> W["Avertir"]
+  U -- oui --> F
+  W --> F["Formulaire pré-rempli<br/>vérifié par l'utilisateur"]
+  F --> R["addRecharge"]
+  R --> D{"Doublon<br/>exact ?"}
+  D -- oui --> X["Refusé"]
+  D -- non --> E["Recharge ajoutée<br/>et crédit 811 remboursé"]

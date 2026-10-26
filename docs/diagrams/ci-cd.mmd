@@ -1,0 +1,12 @@
+flowchart TD
+  A["Push main, pull request<br/>ou lancement manuel"] --> B["Node 24, JDK 21, Gradle 8.14"]
+  B --> C["npm ci"]
+  C --> D["npm run build<br/>Vite : web dans dist"]
+  D --> E["capacitor-assets<br/>icônes et splash Android"]
+  E --> F["cap sync android"]
+  F --> G{"Secret<br/>DEBUG_KEYSTORE_B64 ?"}
+  G -- oui --> H["Restaurer la clé de debug stable"]
+  G -- non --> I["Générer une clé jetable<br/>Google Sign-In natif indisponible"]
+  H --> J["gradle assembleDebug"]
+  I --> J
+  J --> K["Artifact app-debug.apk<br/>conservé 7 jours"]

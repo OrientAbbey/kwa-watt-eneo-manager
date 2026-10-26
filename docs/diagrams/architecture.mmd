@@ -1,0 +1,23 @@
+flowchart TB
+  subgraph UI["Interface React 19"]
+    V["Vues et fonctions<br/>Dashboard, Calcul, Historique,<br/>Services, Profil, Paramètres, Aide<br/>import de SMS, cloche, visite guidée"]
+  end
+  subgraph ST["Contextes et hooks"]
+    C["AppContext, NavContext,<br/>RemoteConfigContext,<br/>TourContext"]
+    H["useAlertScheduler,<br/>useActiveAlerts,<br/>useForegroundTick"]
+  end
+  subgraph LIB["Logique pure testée : src/lib"]
+    L["eneo, energy, smsParser, alerts,<br/>alertNotifications, merge, sync,<br/>photos, migrations, tourLogic"]
+  end
+  subgraph IO["Stockage et plateforme"]
+    LS[("localStorage<br/>données + photos")]
+    FB[("Firebase<br/>Auth + Firestore")]
+    CAP["Capacitor<br/>notifications, caméra,<br/>partage"]
+  end
+  V --> C
+  V --> H
+  C --> L
+  H --> L
+  L --> LS
+  L --> FB
+  L --> CAP

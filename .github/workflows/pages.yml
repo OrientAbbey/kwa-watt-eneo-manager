@@ -1,0 +1,44 @@
+name: Deploy site
+
+# Publie le dossier site/ (page de présentation statique, sans build) sur GitHub Pages.
+# À faire UNE fois à la main : Settings → Pages → Source = « GitHub Actions » (voir docs/DISTRIBUTION.md).
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - "site/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Configure Pages
+      uses: actions/configure-pages@v6
+
+    - name: Upload site
+      uses: actions/upload-pages-artifact@v5
+      with:
+        path: site
+
+    - name: Deploy
+      id: deployment
+      uses: actions/deploy-pages@v5

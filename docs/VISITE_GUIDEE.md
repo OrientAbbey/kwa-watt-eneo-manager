@@ -78,7 +78,7 @@ demande de fermeture.
 
 ## Taille
 
-Surcoût mesuré avec `node scripts/bundle-size.mjs` (gzip niveau 9, hors moteur OCR) : **+7,6 Ko** au total, dont
+Surcoût mesuré avec `node scripts/bundle-size.mjs` (gzip niveau 9, hors moteur OCR) : **+7,7 Ko** au total (7 879 o), dont
 **2,5 Ko** dans un fragment (`TourOverlay`) chargé seulement au démarrage d'une visite.
 
 ## Limites connues

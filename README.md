@@ -73,7 +73,8 @@ Données de démonstration fictives, rendu Chromium (pas une WebView Android : v
 2. Autorisez l'installation depuis cette source si Android le demande (« Sources inconnues »).
 3. Facultatif mais recommandé : comparez l'empreinte **SHA-256** du fichier avec celle indiquée dans les notes de la version.
 
-> Tant qu'aucune version n'a été publiée sur GitHub, le lien ci-dessus renvoie une erreur 404.
+> Tant qu'aucune version n'a été publiée sur GitHub, le lien ci-dessus renvoie une erreur 404 : voir
+> [`docs/DISTRIBUTION.md`](./docs/DISTRIBUTION.md) pour publier la première (et activer la page de présentation).
 
 ## Architecture
 
@@ -258,6 +259,27 @@ flowchart TD
 *Sans le secret `DEBUG_KEYSTORE_B64`, l'APK est quand même construit avec une clé jetable, mais la connexion Google native ne
 fonctionnera pas avec lui. Voir [`docs/SIGNATURE_DEBUG.md`](./docs/SIGNATURE_DEBUG.md).*
 
+### Publication d'une version (APK)
+
+```mermaid
+flowchart TD
+  A["Tag vX.Y.Z poussé<br/>ou lancement manuel"] --> B{"Tag sur main ?"}
+  B -- non --> X["Publication refusée"]
+  B -- oui --> C{"Tag égal à la version<br/>de package.json ?"}
+  C -- non --> X
+  C -- oui --> D["lint, tests, build, cap sync"]
+  D --> E{"Clé de signature<br/>disponible ?"}
+  E -- "aucune" --> X
+  E -- "RELEASE_KEYSTORE_B64" --> F["Option B : clé de release<br/>assembleRelease"]
+  E -- "DEBUG_KEYSTORE_B64" --> G["Option A : clé de debug stable<br/>assembleDebug"]
+  F --> H["kwa-watt.apk, SHA-256<br/>et contrôle de la version"]
+  G --> H
+  H --> I["Release GitHub<br/>lien stable releases/latest/download"]
+```
+*Un tag `vX.Y.Z` (égal à la version de `package.json`) lance la publication. Le fichier s'appelle toujours `kwa-watt.apk`, d'où
+un lien de téléchargement stable. Le `versionCode` Android est calculé : `X×10000 + Y×100 + Z`. Procédure, secrets et choix
+de la clé de signature : [`docs/DISTRIBUTION.md`](./docs/DISTRIBUTION.md).*
+
 ## Démarrage développeur
 
 Prérequis : Node.js 20+ ; JDK 21 et Android Studio uniquement pour compiler l'APK à la main.
@@ -275,9 +297,10 @@ node scripts/bundle-size.mjs        # poids gzip du build, pour mesurer le surco
 Outils facultatifs (n'ajoutent rien à `package.json`) :
 
 ```bash
-npm i --no-save @sparticuz/chromium puppeteer-core mermaid
+npm i --no-save @sparticuz/chromium puppeteer-core mermaid axe-core
 node scripts/screenshots.mjs        # régénère docs/screenshots  (voir docs/CAPTURES.md)
 node scripts/check-diagrams.mjs     # valide les diagrammes Mermaid de docs/diagrams
+node scripts/check-site.mjs         # contrôle le site/ : CSP, requêtes tierces, accessibilité (axe-core), poids
 ```
 
 Le CI compile un APK debug à chaque push sur `main` et à chaque pull request ; il **ne lance pas les tests** : lancez-les
@@ -322,7 +345,8 @@ y compris récupérer une clé d'administrateur Firebase, dans [`docs/CONFIG_A_D
 | [`docs/SYNC_ET_REGLES.md`](./docs/SYNC_ET_REGLES.md) | Synchronisation, fusion, règles Firestore |
 | [`docs/NOTIFICATIONS.md`](./docs/NOTIFICATIONS.md) | Alertes persistantes |
 | [`docs/CONFIG_A_DISTANCE.md`](./docs/CONFIG_A_DISTANCE.md) | Document `app_config/branding` et script d'administration |
-| [`docs/SIGNATURE_DEBUG.md`](./docs/SIGNATURE_DEBUG.md) | Clé de signature et Google Sign-In natif |
+| [`docs/DISTRIBUTION.md`](./docs/DISTRIBUTION.md) | Publier une version, activer GitHub Pages, signature de l'APK |
+| [`docs/SIGNATURE_DEBUG.md`](./docs/SIGNATURE_DEBUG.md) | Clé de signature debug et Google Sign-In natif |
 | [`GOOGLE_AUTH_SETUP.md`](./GOOGLE_AUTH_SETUP.md) | Connexion Google, de bout en bout |
 | [`docs/OCR_COMPARATIF.md`](./docs/OCR_COMPARATIF.md) | Choix du moteur OCR (mesures) |
 | [`docs/LOGO.md`](./docs/LOGO.md) | Logo et variantes |
@@ -341,16 +365,17 @@ src/
   hooks/         planificateur d'alertes, alertes actives, jour, premier plan
   config.ts      constantes centralisées (clés de stockage, client ID, délais)
 android/         projet Capacitor (Gradle)
+site/            page de présentation statique (GitHub Pages) et politique de confidentialité
 docs/            documentation, logo, captures, diagrammes
-scripts/         configuration distante, assets OCR, captures, diagrammes, mesure de taille
-.github/workflows/  compilation de l'APK
+scripts/         configuration distante, assets OCR, captures, diagrammes, contrôle du site, version, mesure de taille
+.github/workflows/  android-build (APK debug), release-apk (version publiée), pages (site)
 ```
 
 ## Confidentialité
 
 L'application fonctionne hors ligne ; en mode visiteur, vos données ne quittent pas le téléphone. Connecté avec Google, elles
 sont synchronisées dans **votre** espace privé Firestore (seul votre compte peut le lire : [`firestore.rules`](./firestore.rules)).
-Le code ne contient **aucune publicité ni outil de mesure d'audience**. Une réserve, par honnêteté : l'interface demande
+Le code ne contient **aucune publicité ni outil de mesure d'audience** ([politique complète](https://orientabbey.github.io/kwa-watt-eneo-manager/confidentialite.html)). Une réserve, par honnêteté : l'interface demande
 ses polices (Inter, JetBrains Mono) à Google Fonts quand le téléphone est en ligne (`src/index.css`) ; hors ligne, une police
 système est utilisée. Les SMS d'exemple du dépôt sont **fictifs**.
 

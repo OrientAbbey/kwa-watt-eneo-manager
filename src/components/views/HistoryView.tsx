@@ -339,7 +339,7 @@ export default function HistoryView() {
 
       {isAdding && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex justify-center items-center p-4">
-          <Card className="w-full max-w-md border-indigo-200 shadow-xl">
+          <Card data-tour="entry-form" className="w-full max-w-md border-indigo-200 shadow-xl">
             <CardContent className="p-5 space-y-4">
               <h3 className="font-semibold text-lg text-slate-800 dark:text-slate-100 border-b pb-2 mb-2">{editingId ? 'Modifier l\'entrée' : 'Ajouter une entrée'}</h3>
               <div>

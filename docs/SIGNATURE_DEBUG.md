@@ -30,3 +30,7 @@ Elle a été présente en clair dans l'historique Git. La retirer du dernier com
 un nettoyage complet nécessiterait de réécrire l'historique (`git filter-repo` + force-push), une opération lourde
 qu'on n'a pas déclenchée ici pour ne pas casser vos autres clones/branches. La nouvelle clé ci-dessus n'a, elle,
 jamais été commitée.
+
+## Publier un APK avec cette clé
+
+Le workflow de publication (`release-apk.yml`) réutilise le secret `DEBUG_KEYSTORE_B64` (option A, bêta) ou une clé de release dédiée (option B). Voir [`DISTRIBUTION.md`](./DISTRIBUTION.md) : l'APK signé en debug est débogable, et changer de clé plus tard oblige à désinstaller.

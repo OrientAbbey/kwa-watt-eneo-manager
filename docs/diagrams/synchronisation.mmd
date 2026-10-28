@@ -1,0 +1,15 @@
+flowchart TD
+  A["Modification locale<br/>ou retour au premier plan"] --> B["Enregistrement local<br/>2 clés : données et photos"]
+  B --> C{"Connecté<br/>avec Google ?"}
+  C -- "non : visiteur" --> Z["Tout reste sur l'appareil"]
+  C -- oui --> D["Lire user_data/uid<br/>dans Firestore"]
+  D --> E["Fusion par enregistrement<br/>le plus récent gagne<br/>tombstones respectées"]
+  E --> F["planPhotoSync, photo par photo<br/>manifeste local contre cloud"]
+  F --> G["Appliquer ici :<br/>take télécharge, removeLocal retire"]
+  G --> H{"Données plus<br/>grosses que 900 Ko ?"}
+  H -- oui --> I["Erreur too_large<br/>données conservées sur l'appareil"]
+  H -- non --> J["Écrire le document d'état"]
+  J --> K["Photos une à une :<br/>upload envoie, deleteRemote retire"]
+  K --> L{"Échec durable<br/>règles, quota ?"}
+  L -- oui --> M["Photos suspendues pour la session<br/>les données restent synchronisées"]
+  L -- non --> N["Mémoriser le manifeste"]

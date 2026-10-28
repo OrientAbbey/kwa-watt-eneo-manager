@@ -140,8 +140,8 @@ export default function DashboardView() {
       )}
 
       {/* Top Metric Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-        <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 relative overflow-hidden flex flex-col justify-between">
+      <div data-tour="metrics" className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        <div data-tour="balance" className="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 relative overflow-hidden flex flex-col justify-between">
           <div className="absolute top-0 right-0 p-4 opacity-10 text-4xl">🔋</div>
           <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mb-1">Énergie Restante (Est.)</p>
           <div className="flex items-baseline gap-2">

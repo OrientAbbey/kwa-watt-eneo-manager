@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KWA-WATT – Suivi d'électricité prépayée au Cameroun (application Android)</title>
+<meta name="description" content="Application Android gratuite et hors ligne pour suivre vos recharges d'électricité prépayée, calculer vos kWh et estimer la fin de votre crédit. Sans publicité.">
+<link rel="canonical" href="https://orientabbey.github.io/kwa-watt-eneo-manager/">
+<meta name="theme-color" content="#1e1b4b">
+<meta name="color-scheme" content="light dark">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src https://api.github.com; base-uri 'none'; form-action 'none'">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:site_name" content="KWA-WATT">
+<meta property="og:title" content="KWA-WATT – Suivi d'électricité prépayée">
+<meta property="og:description" content="Suivez vos recharges, calculez vos kWh et anticipez la fin de votre crédit. Gratuit, hors ligne, sans publicité.">
+<meta property="og:url" content="https://orientabbey.github.io/kwa-watt-eneo-manager/">
+<meta property="og:image" content="https://orientabbey.github.io/kwa-watt-eneo-manager/og.png">
+<meta property="og:image:alt" content="Logo KWA-WATT : une jauge prépayée avec un éclair, et le texte « Suivez votre électricité prépayée ».">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"SoftwareApplication","name":"KWA-WATT","description":"Application Android de suivi d'électricité prépayée : recharges, consommation, calcul des kWh et estimation de la fin du crédit.","applicationCategory":"UtilitiesApplication","operatingSystem":"Android 7.0 et plus","inLanguage":"fr","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"XAF"},"license":"https://www.apache.org/licenses/LICENSE-2.0","url":"https://orientabbey.github.io/kwa-watt-eneo-manager/","downloadUrl":"https://github.com/OrientAbbey/kwa-watt-eneo-manager/releases/latest/download/kwa-watt.apk","image":"https://orientabbey.github.io/kwa-watt-eneo-manager/og.png","codeRepository":"https://github.com/OrientAbbey/kwa-watt-eneo-manager"}
+</script>
+</head>
+<body>
+<a class="skip" href="#contenu">Aller au contenu</a>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="./"><img src="logo.svg" width="36" height="36" alt="">KWA-WATT</a>
+    <nav aria-label="Navigation principale">
+      <ul>
+        <li><a href="#fonctions">Fonctions</a></li>
+        <li><a href="#confidentialite">Confidentialité</a></li>
+        <li><a href="#installer">Installer</a></li>
+        <li><a href="#faq">Questions</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main id="contenu">
+  <section class="hero" aria-labelledby="titre">
+    <div class="wrap">
+      <div>
+        <span class="eyebrow">Électricité prépayée · Cameroun</span>
+        <h1 id="titre">Sachez quand votre crédit d'électricité va finir.</h1>
+        <p>KWA-WATT enregistre vos recharges et vos relevés, calcule vos kWh selon votre tranche tarifaire et estime la date de fin de votre crédit. Gratuit, sans publicité, et il fonctionne sans internet.</p>
+        <div class="cta">
+          <a id="download" class="btn" href="https://github.com/OrientAbbey/kwa-watt-eneo-manager/releases/latest/download/kwa-watt.apk">Télécharger l'APK (Android)</a>
+          <a class="btn ghost" href="#installer">Comment installer ?</a>
+        </div>
+        <p id="release" class="release" aria-live="polite">Android 7.0 ou plus récent · fichier de quelques Mo</p>
+      </div>
+      <figure>
+        <img src="img/tableau-de-bord.webp" width="300" height="666" alt="Écran Tableau de bord de KWA-WATT : énergie restante estimée de 83 kWh, consommation du mois et date estimée de fin de crédit." fetchpriority="high" class="shot">
+      </figure>
+    </div>
+  </section>
+
+  <section aria-labelledby="probleme">
+    <div class="wrap">
+      <h2 id="probleme">Le compteur prépayé ne dit pas tout</h2>
+      <p class="lead">Le compteur affiche un solde, pas ce qui va se passer ensuite. Voici ce que KWA-WATT change.</p>
+      <div class="cards two">
+        <div class="card">
+          <span class="pill">Sans l'application</span>
+          <h3>On découvre la fin du crédit à la coupure</h3>
+          <p>Les recharges se perdent dans les SMS, le prix du kWh dépend de la tranche, les codes du compteur sont difficiles à retenir, et rien ne prévient avant que la lumière s'éteigne.</p>
+        </div>
+        <div class="card">
+          <span class="pill ok">Avec KWA-WATT</span>
+          <h3>Tout est rangé, et la fin du crédit est anticipée</h3>
+          <p>Vos recharges et vos relevés sont au même endroit, les kWh sont calculés selon votre tranche, une date de fin de crédit est estimée, et un rappel vous invite à recharger à temps.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="fonctions" class="alt" aria-labelledby="fonctions-titre">
+    <div class="wrap">
+      <h2 id="fonctions-titre">Ce que fait KWA-WATT</h2>
+      <p class="lead">Les écrans ci-dessous utilisent des données de démonstration fictives.</p>
+      <div class="features">
+        <figure class="feature">
+          <img src="img/services.webp" loading="lazy" decoding="async" width="300" height="666" alt="Onglet Services : boutons de recharge MTN Mobile Money et Orange Money par codes courts.">
+          <figcaption><h3>Recharge par codes courts</h3><p>MTN MoMo et Orange Money en un geste, plus les codes du compteur et le crédit d'urgence 811 suivi comme une dette.</p></figcaption>
+        </figure>
+        <figure class="feature">
+          <img src="img/import-sms.webp" loading="lazy" decoding="async" width="300" height="666" alt="Import d'une recharge depuis un SMS : montant, énergie, référence et compteur reconnus.">
+          <figcaption><h3>Recharge depuis un SMS</h3><p>Collez le SMS de confirmation ou photographiez-le : la lecture se fait sur le téléphone, et vous vérifiez avant d'enregistrer.</p></figcaption>
+        </figure>
+        <figure class="feature">
+          <img src="img/notifications.webp" loading="lazy" decoding="async" width="300" height="666" alt="Fenêtre des notifications avec une alerte de hausse brutale de consommation.">
+          <figcaption><h3>Alertes et rappels</h3><p>Seuil de consommation, hausse brutale, début du mois et rappel de recharge avant la fin estimée du crédit.</p></figcaption>
+        </figure>
+        <figure class="feature">
+          <img src="img/mode-sombre.webp" loading="lazy" decoding="async" width="300" height="666" alt="Tableau de bord en mode sombre.">
+          <figcaption><h3>Mode sombre</h3><p>Plus confortable le soir, et économe sur les écrans OLED.</p></figcaption>
+        </figure>
+        <figure class="feature">
+          <img src="img/visite.webp" loading="lazy" decoding="async" width="300" height="666" alt="Visite guidée de l'application avec une bulle d'explication.">
+          <figcaption><h3>Visite guidée</h3><p>Une présentation interactive au premier lancement, à revoir quand vous voulez.</p></figcaption>
+        </figure>
+      </div>
+      <ul class="list">
+        <li>Calcul montant ⇄ kWh et simulateur de tranche</li>
+        <li>Plusieurs compteurs, export et import des données</li>
+        <li>Synchronisation Google facultative</li>
+        <li>Application légère, pensée pour les données mobiles chères</li>
+      </ul>
+    </div>
+  </section>
+
+  <section aria-labelledby="comment">
+    <div class="wrap">
+      <h2 id="comment">Comment ça marche</h2>
+      <p class="lead">Trois étapes, sans compte obligatoire.</p>
+      <ol class="steps">
+        <li><strong>Installez et ouvrez</strong>Choisissez le mode visiteur : rien à créer, tout reste sur votre téléphone.</li>
+        <li><strong>Enregistrez vos recharges</strong>Saisissez-les, ou collez le SMS de confirmation. Ajoutez vos relevés de consommation.</li>
+        <li><strong>Suivez et anticipez</strong>Lisez l'énergie restante estimée, la date de fin de crédit, et laissez les rappels vous prévenir.</li>
+      </ol>
+      <p class="lead gap">Les chiffres sont des <strong>estimations</strong> calculées à partir de ce que vous saisissez ; ils ne remplacent pas l'affichage de votre compteur.</p>
+    </div>
+  </section>
+
+  <section id="confidentialite" class="alt" aria-labelledby="conf-titre">
+    <div class="wrap">
+      <h2 id="conf-titre">Vos données restent les vôtres</h2>
+      <p class="lead">Pas de publicité, pas de mesure d'audience dans l'application ni sur cette page.</p>
+      <div class="cards three">
+        <div class="card"><h3>Hors ligne d'abord</h3><p>En mode visiteur, vos données ne quittent pas le téléphone. La lecture des photos de SMS se fait sur l'appareil.</p></div>
+        <div class="card"><h3>Synchronisation facultative</h3><p>Si vous vous connectez avec Google, vos compteurs, recharges et relevés sont copiés dans un espace privé que seul votre compte peut lire.</p></div>
+        <div class="card"><h3>Vous gardez la main</h3><p>Vous pouvez exporter vos données (écran Historique) et supprimer votre compte, avec les données synchronisées, depuis l'écran Profil.</p></div>
+      </div>
+      <p class="gap"><a href="confidentialite.html">Lire la politique de confidentialité complète</a></p>
+    </div>
+  </section>
+
+  <section id="installer" aria-labelledby="installer-titre">
+    <div class="wrap">
+      <h2 id="installer-titre">Installer l'application</h2>
+      <p class="lead">KWA-WATT est distribuée directement sous forme de fichier APK, depuis GitHub.</p>
+      <ol class="steps">
+        <li><strong>Téléchargez</strong>Appuyez sur « Télécharger l'APK ». Le fichier s'appelle <code class="nw">kwa-watt.apk</code>.</li>
+        <li><strong>Autorisez l'installation</strong>À l'ouverture du fichier, Android peut demander d'autoriser votre navigateur à installer des applications : acceptez pour cette fois.</li>
+        <li><strong>Vérifiez l'empreinte</strong>Comparez le SHA-256 du fichier avec celui des notes de la version, puis installez.</li>
+      </ol>
+      <p class="gap"><a class="btn" href="https://github.com/OrientAbbey/kwa-watt-eneo-manager/releases/latest/download/kwa-watt.apk">Télécharger l'APK (Android)</a></p>
+      <details>
+        <summary>Comment vérifier l'empreinte SHA-256 ?</summary>
+        <p>Sur la page de la version (GitHub), repérez la ligne « Empreinte SHA-256 ». Sur le téléphone, l'application <em>Termux</em> permet de lancer <code class="nw">sha256sum kwa-watt.apk</code> dans le dossier de téléchargement ; sur ordinateur, <code>sha256sum -c kwa-watt.apk.sha256</code>. Les deux empreintes doivent être strictement identiques. Sinon, ne l'installez pas.</p>
+      </details>
+    </div>
+  </section>
+
+  <section id="faq" class="alt" aria-labelledby="faq-titre">
+    <div class="wrap">
+      <h2 id="faq-titre">Questions fréquentes</h2>
+      <details>
+        <summary>Pourquoi un fichier APK et pas le Play Store ?</summary>
+        <p>L'application est indépendante et gratuite, et elle est distribuée directement depuis son dépôt public. Android affiche donc un avertissement propre à tout fichier installé hors du Play Store.</p>
+      </details>
+      <details>
+        <summary>Comment installer un APK ?</summary>
+        <p>Téléchargez le fichier, ouvrez-le depuis les notifications ou le dossier « Téléchargements », autorisez l'installation depuis cette source si Android le demande (« Sources inconnues » ou « Installer des applications inconnues »), puis validez. Vous pouvez retirer cette autorisation ensuite.</p>
+      </details>
+      <details>
+        <summary>Comment mettre à jour ?</summary>
+        <p>Téléchargez la nouvelle version et installez-la par-dessus l'ancienne : vos données sont conservées. Si Android demande de désinstaller d'abord, sauvegardez vos données avant (synchronisation Google ou export dans l'écran Historique).</p>
+      </details>
+      <details>
+        <summary>Sur quels téléphones ça fonctionne ?</summary>
+        <p>Sur Android 7.0 et plus récent. Il n'existe pas de version pour iPhone.</p>
+      </details>
+      <details>
+        <summary>L'application est-elle officielle ?</summary>
+        <p>Non. KWA-WATT est une application indépendante, non affiliée à ENEO / SOCADEL, ni à MTN, ni à Orange. Ces noms appartiennent à leurs propriétaires.</p>
+      </details>
+      <details>
+        <summary>Faut-il un compte ?</summary>
+        <p>Non. Le mode visiteur fonctionne sans compte et sans internet. La connexion Google sert uniquement à synchroniser vos données entre appareils.</p>
+      </details>
+      <details>
+        <summary>Les estimations sont-elles exactes ?</summary>
+        <p>Ce sont des estimations fondées sur vos recharges et relevés. Fiez-vous toujours à l'affichage de votre compteur.</p>
+      </details>
+      <details>
+        <summary>Combien ça coûte ? Puis-je voir le code ?</summary>
+        <p>L'application est gratuite. Son code source est public sous licence Apache 2.0 : <a href="https://github.com/OrientAbbey/kwa-watt-eneo-manager">dépôt GitHub</a>.</p>
+      </details>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p class="legal"><strong>Application indépendante.</strong> KWA-WATT n'est affiliée ni à ENEO / SOCADEL, ni à MTN, ni à Orange. Ces noms appartiennent à leurs propriétaires et ne servent qu'à désigner les services avec lesquels l'application aide à travailler.</p>
+    <ul>
+      <li><a href="https://github.com/OrientAbbey/kwa-watt-eneo-manager">Code source</a></li>
+      <li><a href="https://github.com/OrientAbbey/kwa-watt-eneo-manager/releases">Versions</a></li>
+      <li><a href="https://github.com/OrientAbbey/kwa-watt-eneo-manager/issues">Contact et signalement d'un problème</a></li>
+      <li><a href="confidentialite.html">Politique de confidentialité</a></li>
+      <li><a href="https://github.com/OrientAbbey/kwa-watt-eneo-manager/blob/main/LICENSE">Licence Apache 2.0</a></li>
+    </ul>
+  </div>
+</footer>
+<script src="app.js" defer></script>
+</body>
+</html>

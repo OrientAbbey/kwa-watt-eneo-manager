@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Politique de confidentialité – KWA-WATT</title>
+<meta name="description" content="Quelles données KWA-WATT utilise, où elles sont stockées, ce qui est synchronisé et comment les supprimer. Aucune publicité, aucune mesure d'audience.">
+<link rel="canonical" href="https://orientabbey.github.io/kwa-watt-eneo-manager/confidentialite.html">
+<meta name="theme-color" content="#1e1b4b">
+<meta name="color-scheme" content="light dark">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self' data:; style-src 'self'; base-uri 'none'; form-action 'none'">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<a class="skip" href="#contenu">Aller au contenu</a>
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="./"><img src="logo.svg" width="36" height="36" alt="">KWA-WATT</a>
+    <nav aria-label="Navigation principale"><ul><li><a href="./">Accueil</a></li></ul></nav>
+  </div>
+</header>
+<main id="contenu" class="wrap prose">
+  <h1>Politique de confidentialité</h1>
+  <p>Dernière mise à jour : 26 octobre 2026. Ce texte décrit ce que fait l'application Android KWA-WATT, telle que son code public le montre. KWA-WATT est une application indépendante, non affiliée à ENEO / SOCADEL, ni à MTN, ni à Orange.</p>
+
+  <h2>1. En résumé</h2>
+  <ul>
+    <li>L'application fonctionne <strong>hors ligne</strong>. En mode visiteur, vos données restent sur votre téléphone.</li>
+    <li>Elle ne contient <strong>aucune publicité</strong> et <strong>aucun outil de mesure d'audience</strong>.</li>
+    <li>La connexion Google est <strong>facultative</strong>. Elle sert seulement à synchroniser vos données entre appareils.</li>
+    <li>Vous pouvez <strong>supprimer votre compte</strong> et vos données synchronisées depuis l'écran Profil.</li>
+  </ul>
+
+  <h2>2. Données enregistrées sur votre téléphone</h2>
+  <p>Ce que vous saisissez : compteurs (nom, numéro), relevés de consommation, recharges (date, montant, kWh, référence de transaction), crédits d'urgence, réglages, et les photos que vous ajoutez à votre profil. Ces données sont conservées dans le stockage local de l'application. Le jeton à 20 chiffres d'un SMS de recharge n'est <strong>pas</strong> enregistré.</p>
+  <p>Le texte d'un SMS que vous collez, ou la photo que vous prenez pour l'import, est analysé <strong>sur le téléphone</strong> (lecture OCR embarquée) ; il n'est pas envoyé à un serveur.</p>
+
+  <h2>3. Connexion Google et synchronisation (facultatives)</h2>
+  <p>Si vous choisissez de vous connecter, l'application utilise Google Sign-In, Firebase Authentication et Firestore (projet Firebase de l'application, région europe-west1). Sont alors copiés dans votre espace privé : votre état d'application (compteurs, relevés, recharges, crédits d'urgence, réglages, informations de profil que vous avez saisies) et les photos de profil. Les règles de la base n'autorisent que votre propre compte à lire ou écrire cet espace. Google traite la connexion selon sa propre politique de confidentialité.</p>
+
+  <h2>4. Autres échanges réseau</h2>
+  <ul>
+    <li><strong>Configuration à distance :</strong> au démarrage, quand le téléphone est en ligne, l'application lit un document public (nom de l'opérateur, liens utiles, codes) dans Firestore. Cette lecture ne contient pas vos données ; le serveur voit, comme pour toute requête, l'adresse IP du téléphone.</li>
+    <li><strong>Polices de caractères :</strong> l'interface demande les polices Inter et JetBrains Mono à Google Fonts quand le téléphone est en ligne. Google peut donc voir l'adresse IP du téléphone à ce moment. Hors ligne, une police du système est utilisée.</li>
+    <li><strong>Liens et codes courts :</strong> les boutons de recharge ouvrent le composeur du téléphone ; les liens externes s'ouvrent dans votre navigateur ou votre messagerie. Ces services appliquent leurs propres règles.</li>
+  </ul>
+
+  <h2>5. Notifications</h2>
+  <p>Les alertes et rappels sont des notifications <strong>locales</strong> programmées par l'application sur votre téléphone. Aucun service de notification distant n'est utilisé.</p>
+
+  <h2>6. Vos choix</h2>
+  <ul>
+    <li><strong>Exporter</strong> vos données : écran Historique.</li>
+    <li><strong>Supprimer</strong> votre compte, vos données synchronisées et vos photos du cloud : écran Profil, « Supprimer mon compte définitivement ». Les données restées sur le téléphone se suppriment en désinstallant l'application.</li>
+    <li><strong>Refuser les notifications</strong> : dans les réglages d'Android ou de l'application.</li>
+  </ul>
+
+  <h2>7. Cette page web</h2>
+  <p>Cette page est hébergée par GitHub Pages. Elle n'utilise <strong>ni cookie, ni traqueur, ni publicité</strong>. GitHub, qui l'héberge, peut conserver des journaux techniques selon sa propre politique. Si JavaScript est actif, la page interroge l'interface publique de GitHub (api.github.com) pour afficher la version, la date et la taille de la dernière version publiée ; ce service voit alors l'adresse IP de votre appareil. Sans JavaScript, la page fonctionne de la même façon, sans ces informations.</p>
+
+  <h2>8. Enfants, modifications et contact</h2>
+  <p>L'application n'est pas destinée à collecter des informations sur des enfants et ne le fait pas de manière spécifique. En cas de changement important, cette page sera mise à jour avec une nouvelle date. Pour toute question ou demande, ouvrez un échange sur <a href="https://github.com/OrientAbbey/kwa-watt-eneo-manager/issues">la page de suivi du projet</a> (publique : n'y mettez ni numéro de compteur, ni numéro de téléphone, ni jeton).</p>
+  <p><a href="./">← Retour à l'accueil</a></p>
+</main>
+<footer>
+  <div class="wrap">
+    <p class="legal"><strong>Application indépendante.</strong> KWA-WATT n'est affiliée ni à ENEO / SOCADEL, ni à MTN, ni à Orange.</p>
+  </div>
+</footer>
+</body>
+</html>

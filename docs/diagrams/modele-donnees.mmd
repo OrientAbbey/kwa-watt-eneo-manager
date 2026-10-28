@@ -1,0 +1,36 @@
+erDiagram
+  ETAT ||--|{ COMPTEUR : "contient"
+  COMPTEUR ||--o{ CONSOMMATION : "releves"
+  COMPTEUR ||--o{ RECHARGE : "achats"
+  COMPTEUR ||--o{ CREDIT_URGENCE : "prets 811"
+  ETAT {
+    int schemaVersion
+    string activeMeterId
+    string theme
+    json settings
+  }
+  COMPTEUR {
+    string id PK
+    string name
+    json profile
+    json tombstones
+  }
+  CONSOMMATION {
+    string id PK
+    string date
+    float kwh
+  }
+  RECHARGE {
+    string id PK
+    string date
+    int montant
+    float kwh
+    string transactionRef
+    int fees
+  }
+  CREDIT_URGENCE {
+    string id PK
+    string date
+    float kwh
+    bool repaid
+  }

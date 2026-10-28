@@ -1,0 +1,13 @@
+flowchart TD
+  A["Tag vX.Y.Z poussé<br/>ou lancement manuel"] --> B{"Tag sur main ?"}
+  B -- non --> X["Publication refusée"]
+  B -- oui --> C{"Tag égal à la version<br/>de package.json ?"}
+  C -- non --> X
+  C -- oui --> D["lint, tests, build, cap sync"]
+  D --> E{"Clé de signature<br/>disponible ?"}
+  E -- "aucune" --> X
+  E -- "RELEASE_KEYSTORE_B64" --> F["Option B : clé de release<br/>assembleRelease"]
+  E -- "DEBUG_KEYSTORE_B64" --> G["Option A : clé de debug stable<br/>assembleDebug"]
+  F --> H["kwa-watt.apk, SHA-256<br/>et contrôle de la version"]
+  G --> H
+  H --> I["Release GitHub<br/>lien stable releases/latest/download"]

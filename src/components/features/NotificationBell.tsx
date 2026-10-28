@@ -33,6 +33,7 @@ export default function NotificationBell({ alerts, notificationsEnabled, onGoSet
     <>
       <button
         onClick={() => setOpen(true)}
+        data-tour="bell"
         aria-label={label}
         title={label}
         // Au-dessus du bouton « + » (bas 6 rem, 56 px de haut) ; sans bouton « + » sur grand écran

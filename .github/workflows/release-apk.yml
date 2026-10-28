@@ -1,0 +1,193 @@
+name: Release APK
+
+# Publie une version : un tag vMAJEUR.MINEUR.CORRECTIF (ex. v1.1.0) construit l'APK, le nomme de façon STABLE
+# (kwa-watt.apk), calcule son SHA-256 et crée la Release GitHub. Procédure complète : docs/DISTRIBUTION.md
+# Lien de téléchargement stable : https://github.com/OrientAbbey/kwa-watt-eneo-manager/releases/latest/download/kwa-watt.apk
+
+on:
+  push:
+    tags: [ "v*" ]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag existant à (re)publier, ex. v1.1.0"
+        required: true
+
+permissions:
+  contents: write # créer la Release et y joindre l'APK
+
+concurrency:
+  group: release-${{ github.event.inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      TAG: ${{ github.event.inputs.tag || github.ref_name }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+    - name: Checkout (tag)
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.inputs.tag || github.ref }}
+        fetch-depth: 0
+
+    - name: Le tag doit appartenir à main
+      run: |
+        git fetch origin main
+        if ! git merge-base --is-ancestor "$(git rev-parse HEAD)" origin/main; then
+          echo "::error::Le tag $TAG n'est pas sur la branche main : publication refusée."
+          exit 1
+        fi
+
+    - name: Version (tag = package.json)
+      id: ver
+      run: node scripts/releaseVersion.mjs "$TAG" --check-package | tee -a "$GITHUB_OUTPUT"
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '24'
+        cache: 'npm'
+
+    - name: Setup Java JDK
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'zulu'
+        java-version: '21'
+
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v3
+      with:
+        gradle-version: '8.14.3'
+
+    - name: Install npm dependencies
+      run: npm ci
+
+    - name: Contrôles (types et tests)
+      run: |
+        npm run lint
+        npx vitest run
+
+    - name: Build Web App
+      run: npm run build
+
+    - name: Generate Android Assets
+      run: npx @capacitor/assets generate --android --assetPath public
+
+    - name: Sync Capacitor
+      run: npx cap sync android
+
+    - name: Clé de signature (stable obligatoire)
+      id: sign
+      env:
+        RELEASE_KEYSTORE_B64: ${{ secrets.RELEASE_KEYSTORE_B64 }}
+        RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+        RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+        RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        DEBUG_KEYSTORE_B64: ${{ secrets.DEBUG_KEYSTORE_B64 }}
+      run: |
+        if [ -n "$RELEASE_KEYSTORE_B64" ]; then
+          # Option B : vraie clé de release (recommandée pour une diffusion publique)
+          if [ -z "$RELEASE_KEYSTORE_PASSWORD" ] || [ -z "$RELEASE_KEY_ALIAS" ] || [ -z "$RELEASE_KEY_PASSWORD" ]; then
+            echo "::error::RELEASE_KEYSTORE_B64 est défini mais il manque RELEASE_KEYSTORE_PASSWORD, RELEASE_KEY_ALIAS ou RELEASE_KEY_PASSWORD."
+            exit 1
+          fi
+          printf '%s' "$RELEASE_KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/kwa-watt-release.keystore"
+          {
+            echo "RELEASE_KEYSTORE_FILE=$RUNNER_TEMP/kwa-watt-release.keystore"
+            echo "RELEASE_KEYSTORE_PASSWORD=$RELEASE_KEYSTORE_PASSWORD"
+            echo "RELEASE_KEY_ALIAS=$RELEASE_KEY_ALIAS"
+            echo "RELEASE_KEY_PASSWORD=$RELEASE_KEY_PASSWORD"
+          } >> "$GITHUB_ENV"
+          echo "mode=release" >> "$GITHUB_OUTPUT"
+          echo "Signature : clé de release."
+        elif [ -n "$DEBUG_KEYSTORE_B64" ]; then
+          # Option A : clé de debug stable (bêta). Même SHA-1 que celui enregistré dans Firebase.
+          printf '%s' "$DEBUG_KEYSTORE_B64" | base64 -d > android/app/kwa-watt-debug.p12
+          echo "mode=debug" >> "$GITHUB_OUTPUT"
+          echo "::warning::Signature avec la clé de DEBUG (option A, bêta) : APK déclaré débogable. Voir docs/DISTRIBUTION.md pour passer à une clé de release."
+        else
+          echo "::error::Aucune clé de signature stable (RELEASE_KEYSTORE_B64 ou DEBUG_KEYSTORE_B64). Une clé jetable changerait à chaque version et bloquerait les mises à jour : publication refusée."
+          exit 1
+        fi
+
+    - name: Build APK
+      id: build
+      working-directory: android
+      run: |
+        ARGS="-PappVersionName=${{ steps.ver.outputs.version_name }} -PappVersionCode=${{ steps.ver.outputs.version_code }}"
+        if [ "${{ steps.sign.outputs.mode }}" = "release" ]; then
+          gradle assembleRelease $ARGS
+          echo "apk=android/app/build/outputs/apk/release/app-release.apk" >> "$GITHUB_OUTPUT"
+        else
+          gradle assembleDebug $ARGS
+          echo "apk=android/app/build/outputs/apk/debug/app-debug.apk" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Nom stable, SHA-256 et contrôles de l'APK
+      id: pack
+      run: |
+        cp "${{ steps.build.outputs.apk }}" kwa-watt.apk
+        sha256sum kwa-watt.apk > kwa-watt.apk.sha256
+        echo "sha256=$(cut -d' ' -f1 kwa-watt.apk.sha256)" >> "$GITHUB_OUTPUT"
+        echo "size_mb=$(du -m kwa-watt.apk | cut -f1)" >> "$GITHUB_OUTPUT"
+        TOOLS="$(ls -d "${ANDROID_HOME:-/usr/local/lib/android/sdk}"/build-tools/* 2>/dev/null | sort -V | tail -1)"
+        CERT=""
+        if [ -n "$TOOLS" ] && [ -x "$TOOLS/apksigner" ]; then
+          CERT="$("$TOOLS/apksigner" verify --print-certs kwa-watt.apk | grep -m1 'SHA-256 digest' | sed 's/.*: //')"
+        fi
+        echo "cert=$CERT" >> "$GITHUB_OUTPUT"
+        if [ -n "$TOOLS" ] && [ -x "$TOOLS/aapt2" ]; then
+          BADGING="$("$TOOLS/aapt2" dump badging kwa-watt.apk | head -1)"
+          echo "$BADGING"
+          case "$BADGING" in
+            *"versionCode='${{ steps.ver.outputs.version_code }}'"*"versionName='${{ steps.ver.outputs.version_name }}'"*) echo "Version de l'APK conforme au tag." ;;
+            *) echo "::error::La version lue dans l'APK ne correspond pas au tag."; exit 1 ;;
+          esac
+        else
+          echo "::warning::aapt2 introuvable : version de l'APK non vérifiée."
+        fi
+
+    - name: Notes de version
+      run: |
+        {
+          echo "## KWA-WATT ${TAG}"
+          echo
+          echo "Application indépendante de suivi d'électricité prépayée (non affiliée à ENEO / SOCADEL, MTN ni Orange)."
+          echo
+          echo "**Télécharger :** \`kwa-watt.apk\` (≈ ${{ steps.pack.outputs.size_mb }} Mo, Android 7.0 ou plus récent)."
+          echo
+          echo "### Vérifier le fichier"
+          echo "- Empreinte **SHA-256** de l'APK : \`${{ steps.pack.outputs.sha256 }}\`"
+          if [ -n "${{ steps.pack.outputs.cert }}" ]; then
+            echo "- Empreinte SHA-256 du **certificat de signature** : \`${{ steps.pack.outputs.cert }}\`"
+          fi
+          echo "- Sur Android : application *Termux* → \`sha256sum kwa-watt.apk\` ; sur ordinateur : \`sha256sum -c kwa-watt.apk.sha256\`."
+          echo
+          echo "### Installer"
+          echo "1. Ouvrez le fichier téléchargé et autorisez l'installation depuis cette source si Android le demande."
+          echo "2. Si Play Protect affiche un avertissement, c'est que l'application ne vient pas du Play Store : choisissez « Installer quand même » **seulement** si l'empreinte correspond."
+          echo "3. Pour mettre à jour, installez simplement la nouvelle version par-dessus (vos données sont conservées)."
+          echo
+          if [ "${{ steps.sign.outputs.mode }}" = "debug" ]; then
+            echo "> ⚠️ **Version bêta** : signée avec la clé de développement. Une future version signée avec une clé de release demandera de désinstaller celle-ci au préalable (sauvegardez vos données : synchronisation Google ou export)."
+          fi
+          echo "Page de présentation : https://orientabbey.github.io/kwa-watt-eneo-manager/"
+        } > notes.md
+        cat notes.md
+
+    - name: Créer ou mettre à jour la Release
+      run: |
+        if gh release view "$TAG" >/dev/null 2>&1; then
+          gh release upload "$TAG" kwa-watt.apk kwa-watt.apk.sha256 --clobber
+          gh release edit "$TAG" --title "KWA-WATT $TAG" --notes-file notes.md
+        else
+          gh release create "$TAG" kwa-watt.apk kwa-watt.apk.sha256 --title "KWA-WATT $TAG" --notes-file notes.md --verify-tag
+        fi

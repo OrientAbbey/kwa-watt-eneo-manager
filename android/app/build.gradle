@@ -1,5 +1,13 @@
 apply plugin: 'com.android.application'
 
+// Version : injectée par la CI de publication (-PappVersionName=1.2.3 -PappVersionCode=10203, voir scripts/releaseVersion.mjs).
+// Valeurs par défaut = version de package.json (un test les compare) pour les builds locaux et la CI de développement.
+def appVersionName = project.findProperty('appVersionName') ?: '1.1.0'
+def appVersionCode = (project.findProperty('appVersionCode') ?: '10100').toInteger()
+
+// Signature de release (facultative) : fournie par l'environnement de la CI de publication, jamais par le dépôt.
+def releaseKeystoreFile = System.getenv('RELEASE_KEYSTORE_FILE')
+
 android {
     namespace = "com.eneotool.app"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -12,13 +20,21 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        if (releaseKeystoreFile) {
+            release {
+                storeFile file(releaseKeystoreFile)
+                storePassword System.getenv('RELEASE_KEYSTORE_PASSWORD')
+                keyAlias System.getenv('RELEASE_KEY_ALIAS')
+                keyPassword System.getenv('RELEASE_KEY_PASSWORD')
+            }
+        }
     }
     defaultConfig {
         applicationId "com.eneotool.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode appVersionCode
+        versionName appVersionName
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -30,6 +46,9 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            if (releaseKeystoreFile) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 }

@@ -3,7 +3,8 @@ import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
 const ROOT = join(__dirname, "..");
-const readme = readFileSync(join(ROOT, "README.md"), "utf-8");
+const normalizeNewlines = (text: string) => text.replace(/\r\n?/g, "\n");
+const readme = normalizeNewlines(readFileSync(join(ROOT, "README.md"), "utf-8"));
 const dir = join(ROOT, "docs", "diagrams");
 const sources = readdirSync(dir).filter((f) => f.endsWith(".mmd")).sort();
 
@@ -16,17 +17,17 @@ describe("diagrammes Mermaid du README", () => {
   });
   it("le README intègre chaque source docs/diagrams/*.mmd à l'identique (pas de dérive entre les deux)", () => {
     for (const f of sources) {
-      const src = readFileSync(join(dir, f), "utf-8").trimEnd() + "\n";
+      const src = normalizeNewlines(readFileSync(join(dir, f), "utf-8")).trimEnd() + "\n";
       expect(blocks, `${f} absent du README ou différent de sa source`).toContain(src);
     }
   });
   it("le README ne contient aucun bloc Mermaid sans source versionnée", () => {
-    const all = sources.map((f) => readFileSync(join(dir, f), "utf-8").trimEnd() + "\n");
+    const all = sources.map((f) => normalizeNewlines(readFileSync(join(dir, f), "utf-8")).trimEnd() + "\n");
     for (const b of blocks) expect(all).toContain(b);
   });
   it("chaque diagramme commence par un type Mermaid connu et reste simple (≤ 60 lignes)", () => {
     for (const f of sources) {
-      const lines = readFileSync(join(dir, f), "utf-8").trim().split("\n");
+      const lines = normalizeNewlines(readFileSync(join(dir, f), "utf-8")).trim().split("\n");
       expect(lines[0]).toMatch(/^(flowchart (TB|TD|LR)|sequenceDiagram|erDiagram)$/);
       expect(lines.length).toBeLessThanOrEqual(60);
     }

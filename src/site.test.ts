@@ -119,17 +119,19 @@ describe("page de présentation : liens et cohérence avec la publication", () =
     expect(readFileSync(join(ROOT, "README.md"), "utf-8")).toContain(DOWNLOAD);
     expect(readFileSync(join(SITE, "app.js"), "utf-8")).toContain('"kwa-watt.apk"');
   });
-  it("TOUS les liens de téléchargement de l'APK sont identiques, et le bouton principal en fait partie", () => {
-    const hrefs = [...index.matchAll(/href="([^"]*releases\/latest\/download[^"]*)"/g)].map((m) => m[1]);
-    expect(hrefs.length).toBeGreaterThanOrEqual(2); // héros + section d'installation
-    for (const h of hrefs) expect(h).toBe(DOWNLOAD);
+  it("tous les liens APK ont un fallback utilisable vers les versions, même sans JavaScript", () => {
+    const links = [...index.matchAll(/<a([^>]*data-release-download[^>]*)>/g)].map((m) => m[1]);
+    expect(links.length).toBeGreaterThanOrEqual(2); // héros + section d'installation
+    for (const link of links) expect(link).toContain('href="https://github.com/OrientAbbey/kwa-watt-eneo-manager/releases"');
     const main = /<a id="download"[^>]*href="([^"]+)"/.exec(index)?.[1];
-    expect(main).toBe(DOWNLOAD);
+    expect(main).toBe("https://github.com/OrientAbbey/kwa-watt-eneo-manager/releases");
   });
-  it("le script bascule vers la page des versions quand aucune release n'existe (pas de lien mort)", () => {
+  it("le script bascule tous les liens vers l'APK seulement si la release le fournit", () => {
     const js = read("app.js");
     expect(js).toMatch(/404/);
-    expect(js).toContain("releases\"");
+    expect(js).toContain('querySelectorAll("[data-release-download]")');
+    expect(js).toContain("link.href = DOWNLOAD");
+    expect(js).toContain("link.textContent = \"Télécharger l'APK (Android)\"");
   });
   it("la politique de confidentialité cite les points sensibles : Google Fonts, API GitHub, suppression du compte", () => {
     expect(privacy).toMatch(/Google Fonts/);

@@ -49,10 +49,10 @@
         <h1 id="titre">Sachez quand votre crédit d'électricité va finir.</h1>
         <p>KWA-WATT enregistre vos recharges et vos relevés, calcule vos kWh selon votre tranche tarifaire et estime la date de fin de votre crédit. Gratuit, sans publicité, et il fonctionne sans internet.</p>
         <div class="cta">
-          <a id="download" class="btn" href="https://github.com/OrientAbbey/kwa-watt-eneo-manager/releases/latest/download/kwa-watt.apk">Télécharger l'APK (Android)</a>
+          <a id="download" class="btn" data-release-download href="https://github.com/OrientAbbey/kwa-watt-eneo-manager/releases">Voir les versions</a>
           <a class="btn ghost" href="#installer">Comment installer ?</a>
         </div>
-        <p id="release" class="release" aria-live="polite">Android 7.0 ou plus récent · fichier de quelques Mo</p>
+        <p id="release" class="release" aria-live="polite">Consultez la page des versions pour vérifier la disponibilité du téléchargement.</p>
       </div>
       <figure>
         <img src="img/tableau-de-bord.webp" width="300" height="666" alt="Écran Tableau de bord de KWA-WATT : énergie restante estimée de 83 kWh, consommation du mois et date estimée de fin de crédit." fetchpriority="high" class="shot">
@@ -149,7 +149,7 @@
         <li><strong>Autorisez l'installation</strong>À l'ouverture du fichier, Android peut demander d'autoriser votre navigateur à installer des applications : acceptez pour cette fois.</li>
         <li><strong>Vérifiez l'empreinte</strong>Comparez le SHA-256 du fichier avec celui des notes de la version, puis installez.</li>
       </ol>
-      <p class="gap"><a class="btn" href="https://github.com/OrientAbbey/kwa-watt-eneo-manager/releases/latest/download/kwa-watt.apk">Télécharger l'APK (Android)</a></p>
+      <p class="gap"><a class="btn" data-release-download href="https://github.com/OrientAbbey/kwa-watt-eneo-manager/releases">Voir les versions</a></p>
       <details>
         <summary>Comment vérifier l'empreinte SHA-256 ?</summary>
         <p>Sur la page de la version (GitHub), repérez la ligne « Empreinte SHA-256 ». Sur le téléphone, l'application <em>Termux</em> permet de lancer <code class="nw">sha256sum kwa-watt.apk</code> dans le dossier de téléchargement ; sur ordinateur, <code>sha256sum -c kwa-watt.apk.sha256</code>. Les deux empreintes doivent être strictement identiques. Sinon, ne l'installez pas.</p>

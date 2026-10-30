@@ -218,22 +218,22 @@ sequenceDiagram
   autonumber
   participant U as Utilisateur
   participant A as Application
-  participant N as Zone de<br/>notification
+  participant N as Notifications
 
-  Note over A,N: Ouverture, retour au premier plan,<br/>changement de jour
+  Note over A,N: Ouverture, retour au premier plan ou changement de jour
   A->>N: lire les notifications présentes
   N-->>A: identifiants affichés
-  A->>A: planAlertNotifications :<br/>alertes actives, présentes,<br/>supprimées cette session
-  A->>N: publier les manquantes<br/>son la 1re fois du mois
+  A->>A: planAlertNotifications : alertes actives, présentes et supprimées cette session
+  A->>N: publier les alertes manquantes
   A->>N: retirer les inactives
-  Note over N: notification permanente<br/>non balayable
+  Note over N: notification permanente, non balayable
   U->>N: bouton Supprimer
   N-->>A: notification retirée
-  Note over A: pas de republication<br/>pendant cette session
+  Note over A: ne pas republier avant la prochaine ouverture
   U->>A: rouvre l'application
   A->>A: alerte active, notification absente
-  A->>N: republication sans son
-  Note over N: Début du mois : déclencheur<br/>à minuit, même app fermée
+  A->>N: republier sans son
+  Note over N: déclencheur mensuel à minuit, même app fermée
 ```
 
 *La zone de notification reflète les alertes actives : tant qu'une alerte est active elle réapparaît à la prochaine ouverture

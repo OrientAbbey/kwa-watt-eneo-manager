@@ -2,8 +2,8 @@ apply plugin: 'com.android.application'
 
 // Version : injectée par la CI de publication (-PappVersionName=1.2.3 -PappVersionCode=10203, voir scripts/releaseVersion.mjs).
 // Valeurs par défaut = version de package.json (un test les compare) pour les builds locaux et la CI de développement.
-def appVersionName = project.findProperty('appVersionName') ?: '1.1.0'
-def appVersionCode = (project.findProperty('appVersionCode') ?: '10100').toInteger()
+def appVersionName = project.findProperty('appVersionName') ?: '1.1.1'
+def appVersionCode = (project.findProperty('appVersionCode') ?: '10101').toInteger()
 
 // Signature de release (facultative) : fournie par l'environnement de la CI de publication, jamais par le dépôt.
 def releaseKeystoreFile = System.getenv('RELEASE_KEYSTORE_FILE')

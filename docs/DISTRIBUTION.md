@@ -73,6 +73,13 @@ Si les deux jeux de secrets existent, **B est utilisée**.
 5. Vérifiez le lien stable : `https://github.com/OrientAbbey/kwa-watt-eneo-manager/releases/latest/download/kwa-watt.apk`
    et installez l'APK sur un téléphone (voir `docs/QA_CHECKLIST.md`).
 
+### Versions publiées
+
+| Version | Date | Contenu |
+|---|---|---|
+| `v1.1.1` | 2026-11-18 | Maintenance des dépendances, nettoyage des outils et réduction des alertes npm (0 critique). Détails dans [`CHANGELOG.md`](../CHANGELOG.md) et [`docs/PLAN-MISE-A-JOUR-ET-NETTOYAGE.md`](./PLAN-MISE-A-JOUR-ET-NETTOYAGE.md). |
+| `v1.1.0` | 2026-10-28 | Première publication de l'APK avec lien de téléchargement stable. |
+
 Le workflow **refuse** de publier si : le tag n'est pas sur `main` ; le tag ne correspond pas à `package.json` ; `lint` ou
 les tests échouent ; aucune clé stable n'est configurée ; la version lue dans l'APK ne correspond pas au tag.
 Pour republier un tag existant : **Actions → Release APK → Run workflow** en donnant le tag (les fichiers sont remplacés).

@@ -6,7 +6,7 @@
  */
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { gzipSync } from "node:zlib";
-import { join, extname } from "node:path";
+import { join, extname, sep } from "node:path";
 
 const args = process.argv.slice(2);
 const dist = args.find((a) => !a.startsWith("--")) ?? "dist";
@@ -25,7 +25,7 @@ walk(dist);
 const rows = files
   .map((p) => {
     const buf = readFileSync(p);
-    return { file: p.replace(`${dist}/`, ""), raw: buf.length, gzip: gzipSync(buf, { level: 9 }).length };
+    return { file: p.split(sep).join("/").replace(`${dist}/`, ""), raw: buf.length, gzip: gzipSync(buf, { level: 9 }).length };
   })
   .sort((a, b) => b.gzip - a.gzip);
 const sum = (list) => list.reduce((t, r) => ({ raw: t.raw + r.raw, gzip: t.gzip + r.gzip }), { raw: 0, gzip: 0 });

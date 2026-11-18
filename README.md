@@ -303,6 +303,16 @@ node scripts/check-diagrams.mjs     # valide les diagrammes Mermaid de docs/diag
 node scripts/check-site.mjs         # contrôle le site/ : CSP, requêtes tierces, accessibilité (axe-core), poids
 ```
 
+Contrôle des dépendances et de l'hygiène du dépôt (environnement Python 3.12 isolé, aucun paquet à installer) :
+
+```bash
+py -3.12 -m venv .venv
+.venv\Scripts\python.exe scripts/check_dependency_manifest.py   # manifestes npm cohérents, secrets non suivis
+```
+
+Le suivi détaillé de la mise à jour des dépendances et du nettoyage est dans
+[`docs/PLAN-MISE-A-JOUR-ET-NETTOYAGE.md`](./docs/PLAN-MISE-A-JOUR-ET-NETTOYAGE.md).
+
 Le CI compile un APK debug à chaque push sur `main` et à chaque pull request ; il **ne lance pas les tests** : lancez-les
 avant de pousser.
 
@@ -352,6 +362,7 @@ y compris récupérer une clé d'administrateur Firebase, dans [`docs/CONFIG_A_D
 | [`docs/LOGO.md`](./docs/LOGO.md) | Logo et variantes |
 | [`docs/CAPTURES.md`](./docs/CAPTURES.md) | Captures d'écran : méthode et limites |
 | [`docs/QA_CHECKLIST.md`](./docs/QA_CHECKLIST.md) | Recette manuelle (web puis Android) |
+| [`docs/PLAN-MISE-A-JOUR-ET-NETTOYAGE.md`](./docs/PLAN-MISE-A-JOUR-ET-NETTOYAGE.md) | Suivi des mises à jour de dépendances et du nettoyage |
 | [`docs/diagrams/`](./docs/diagrams) | Sources des diagrammes Mermaid |
 
 ## Structure du projet
@@ -367,7 +378,7 @@ src/
 android/         projet Capacitor (Gradle)
 site/            page de présentation statique (GitHub Pages) et politique de confidentialité
 docs/            documentation, logo, captures, diagrammes
-scripts/         configuration distante, assets OCR, captures, diagrammes, contrôle du site, version, mesure de taille
+scripts/         configuration distante, assets OCR, captures, diagrammes, contrôle du site, version, mesure de taille, contrôle des manifestes (Python 3.12)
 .github/workflows/  android-build (APK debug), release-apk (version publiée), pages (site)
 ```
 

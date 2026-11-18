@@ -302,7 +302,7 @@ npx cap sync android
 - Les règles Firestore doivent toujours valider `request.auth.uid == userId`.
 - La session locale expire après `authMaxAgeMs` (30 jours par défaut, réglable dans `src/config.ts`).
 - Les photos capturées sont compressées avant sauvegarde (documents Firestore < 1 Mo).
-- 🔒 **Revue sécurité 09/09/2026** : pas de secret committé (le client secret OAuth web reste hors repo) ; suppression autorisée sur son propre doc Firestore (`allow delete`), `npm ci` en CI (lockfile figé). `npm audit` signale 7 vulns dans `@capacitor/assets` (sharp/tar/uuid — **dev-only**, jamais embarquées dans l'APK ni le bundle web) : risque **accepté**, à revoir à la prochaine montée de version de `@capacitor/assets`.
+- 🔒 **Revue sécurité 18/11/2026** : pas de secret committé (le client secret OAuth web reste hors repo) ; suppression autorisée sur son propre doc Firestore (`allow delete`), `npm ci` en CI (lockfile figé). `@capacitor/assets` est passé en 4.0.0 (plus de `sharp` 0.32) et les scripts d'installation sont limités aux deux `esbuild`. L'audit restant concerne surtout des outils de build/test et le script d'administration Firebase (**dev-only**, jamais embarqués dans l'APK ni le bundle web) ; le détail et la date de réexamen sont dans [`docs/PLAN-MISE-A-JOUR-ET-NETTOYAGE.md`](./docs/PLAN-MISE-A-JOUR-ET-NETTOYAGE.md).
 - 🔑 **`kwa-watt-debug.p12` est volontairement commité** : clé **debug uniquement** (aucun accès aux stores ni données), nécessaire pour rendre le sign-in Google fonctionnel sur toutes les builds (CI et locales). Ne jamais la réutiliser comme clé de release.
 
 ---
